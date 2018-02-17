@@ -1,3 +1,4 @@
+
 /* 4-way multiplexor:
  * out = a if sel == 00
  *       b if sel == 01
@@ -13,13 +14,13 @@ PARTS:
 	And(a=a, b=e, out=n);
 	And(a=l, b=m, out=e);
 	And(a=b, b=l, out=f);
-	And(a=f, b=sel[1], out=g);
-	And(a=c, b=sel[0], out=h);
+	And(a=f, b=sel[0], out=g);
+	And(a=c, b=sel[1], out=h);
 	And(a=h, b=m, out=i);
-	And(a=d, b=sel[0], out=j);
-	And(a=j, b=sel[1], out=k);
-	Not(in=sel[0], out=l);
-	Not(in=sel[1], out=m);
+	And(a=d, b=sel[1], out=j);
+	And(a=j, b=sel[0], out=k);
+	Not(in=sel[1], out=l);
+	Not(in=sel[0], out=m);
 	Or(a=i, b=k, out=o);
 	Or(a=g, b=o, out=p);
 	Or(a=n, b=p, out=out);

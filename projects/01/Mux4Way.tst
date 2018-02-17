@@ -1,6 +1,6 @@
 load Mux4Way.hdl,
 output-file Mux4Way.out,
-//compare-to Mux4Way.cmp,
+compare-to Mux4Way.cmp,
 output-list a%B3.1.3 b%B3.1.3 c%B3.1.3 d%B3.1.3 sel%B2.2.2 out%B3.1.3;
 
 set a 0,
