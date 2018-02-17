@@ -12,6 +12,7 @@ CHIP Or8Way {
     IN in[8];
     OUT out;
 
+// Ten ORs in a pyramid? Or 7 in a cascade!
 PARTS:
 	Or(a=in[0], b=in[1], out=or1);
 	Or(a=in[2], b=or1, out=or2);
