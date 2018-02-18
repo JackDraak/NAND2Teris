@@ -13,10 +13,18 @@ CHIP DMux {
     IN in, sel;
     OUT a, b;
 
-// a=in.!sel
-// b=in.sel
 PARTS:
-    And(a=in, b=sel, out=b);
-    Not(in=sel, out=neqsel);
-    And(a=neqsel, b=in, out=a);
+/*
+	// a=in.!sel
+	// b=in.sel
+	And(a=in, b=sel, out=b);
+	Not(in=sel, out=neqsel);
+	And(a=neqsel, b=in, out=a);
+*/
+// I have a pattern for a 4-NAND 2-way DMux (1-NAND savings)
+// for optimization purposes:
+	Nand(a=sel, b=in, out=z);
+	Nand(a=z, b=in, out=y);
+	Nand(a=y, b=true, out=a);
+	Nand(a=z, b=true, out=b);
 }
