@@ -17,7 +17,7 @@ CHIP Mux {
 // First draft I came-up with for this req was A.B+B.C+A.C', 
 // but after sleeping on it, I think I can trim an AND gate:
 PARTS:
-/* First draft
+/* First draft: OUT=A.B+B.C+A.C'
 	And(a=a, b=b, out=andab);
 	And(a=b, b=sel, out=andbc);
 	Not(in=sel, out=neqc);
@@ -25,7 +25,7 @@ PARTS:
 	Or(a=andab, b=or1, out=out);
 	Or(a=andbc, b=andaneqc, out=or1);
 
-// New formula: OUT=B(A+C)+A.C' where "C" = Sel input.
+// Second draft: OUT=B(A+C)+A.C' where "C" = Sel input.
 	Or(a=a, b=sel, out=or1);
 	Not(in=sel, out=neqsel);
 	And(a=or1, b=b, out=and1);
