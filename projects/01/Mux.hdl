@@ -14,7 +14,7 @@ CHIP Mux {
     IN a, b, sel;
     OUT out;
 
-// First draft I came-up with for this req was A.B+B.C+A.!C, 
+// First draft I came-up with for this req was A.B+B.C+A.C', 
 // but after sleeping on it, I think I can trim an AND gate:
 PARTS:
 /* First draft
@@ -24,11 +24,20 @@ PARTS:
 	And(a=a, b=neqc, out=andaneqc);
 	Or(a=andab, b=or1, out=out);
 	Or(a=andbc, b=andaneqc, out=or1);
-*/
-// New formula: OUT=B(A+C)+A.!C where 'C' = Sel input.
+
+// New formula: OUT=B(A+C)+A.C' where "C" = Sel input.
 	Or(a=a, b=sel, out=or1);
 	Not(in=sel, out=neqsel);
 	And(a=or1, b=b, out=and1);
 	And(a=a, b=neqsel, out=and2);
 	Or(a=and1, b=and2, out=out);
+*/
+// Instructor says this "can be done with 3 gates [Or, Not, And]". 
+// I reviewed my work, and can come up with a different solution, but
+// it uses the same # of gates: A(B+C')+B.C = F
+	And(a=b, b=sel, out=z);
+	Not(in=sel, out=nsel);
+	Or(a=b, b=nsel, out=y);
+	And(a=a, b=y, out=x);
+	Or(a=z, b=x, out=out);
 }
