@@ -23,7 +23,7 @@ PARTS:
 	And(a=a, b=b, out=x);
 	Or(a=y, b=x, out=carry);
 */
-// The same chip, but using HA's... apparently a FA can be made with 9 NANDs.
+// The same chip, but using HA's... apparently a FA can be made with 9 NANDs
   HalfAdder(a=a, b=b, sum=d, carry=e1);
   HalfAdder(a=c, b=d, sum=sum, carry=e2);
   Or(a=e1, b=e2, out=carry);
