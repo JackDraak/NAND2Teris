@@ -1,0 +1,9 @@
+CHIP Or3Way {
+    IN a, b, c;
+    OUT out;
+
+// Might be a better way to do this, just whipping a couple 3-ways together
+PARTS:
+    Or(a=a, b=b, out=ab);
+	Or(a=ab, b=c, out=out);
+}
