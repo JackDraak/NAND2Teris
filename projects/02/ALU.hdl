@@ -52,11 +52,10 @@ PARTS:
 	Inc16(in=prenegy, out=negy);
 	Mux16(a=xzx, b=negx, sel=nx, out=xnx);
 	Mux16(a=yzy, b=negy, sel=ny, out=yny);
-// F:OR
-//	Or16(a=xnx, b=yny, out=for);
+// F
 	And16(a=xnx, b=yny, out=fand);
 	Add16(a=xnx, b=yny, out=fadd);
-	Mux16(a=fadd, b=fand, sel=f, out=fout);
+	Mux16(a=fand, b=fadd, sel=f, out=fout);
 // NO
 	Not16(in=fout, out=preneg);
 	Inc16(in=preneg, out=neg);
