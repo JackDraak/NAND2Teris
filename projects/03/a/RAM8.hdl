@@ -23,6 +23,6 @@ PARTS:
 	Register(in=in, out=eout, load=e);
 	Register(in=in, out=fout, load=f);
 	Register(in=in, out=gout, load=g);
-	Register(in=in, out=hout, load=h);	
+	Register(in=in, out=hout, load=h);
 	Mux8Way16(a=aout, b=bout, c=cout, d=dout, e=eout, f=fout, g=gout, h=hout, out=out, sel=address);
 }
