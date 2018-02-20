@@ -27,16 +27,16 @@ PARTS:
   HalfAdder(a=c, b=d, sum=sum, carry=e2);
   Or(a=e1, b=e2, out=carry);
 */
-// So, I drafted a FullAdder on paper comprised of it's constituent NAND gates
+// So, I drafted a FullAdder on paper, comprised of it's constituent NAND gates
 // and in short order identified 6/15 NAND chips that I should be able to get
 // rid of (assuming I drafted it correctly, etc.)
-  Nand(a=a, b=b, out=d);
-  Nand(a=a, b=d, out=e);
-  Nand(a=d, b=b, out=f);
-  Nand(a=e, b=f, out=g);
-  Nand(a=g, b=c, out=h);
-  Nand(a=g, b=h, out=i);
-  Nand(a=h, b=c, out=j);
+  Nand(a=a, b=b, out=d);  // 1
+  Nand(a=a, b=d, out=e);  // 2
+  Nand(a=d, b=b, out=f);  // 3
+  Nand(a=e, b=f, out=g);  // 4
+  Nand(a=g, b=c, out=h);  // 5
+  Nand(a=g, b=h, out=i);  // 6
+  Nand(a=h, b=c, out=j);  // 7
   Nand(a=i, b=j, out=sum);
   Nand(a=d, b=h, out=carry);
 }
