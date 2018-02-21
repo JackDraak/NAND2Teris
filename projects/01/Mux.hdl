@@ -40,7 +40,9 @@ PARTS:
 	And(a=a, b=y, out=x);
 	Or(a=z, b=x, out=out);
 */
-// My MHRD Mux is only 4 NANDs... can I reproduce it here?
+// My MHRD Mux is only 4 NANDs...
+// out = Nand(Nand(b.sel).Nand(a.Nand(sel.true)))
+// out = (b.sel)'.(a.sel')' 
 	Nand(a=sel, b=true, out=n4);
 	Nand(a=b, b=sel, out=n3);
 	Nand(a=n4, b=a, out=n2);

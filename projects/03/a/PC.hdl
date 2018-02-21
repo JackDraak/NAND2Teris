@@ -16,7 +16,7 @@ CHIP PC {
     OUT out[16];
 
 PARTS:
-	Register(in[0]=reset, in[1]=load, in[2]=inc, out[0]=c0, out[1]=c1, out[2]=c2);
+	Register(load=true, in[0]=reset, in[1]=load, in[2]=inc, out[0]=c0, out[1]=c1, out[2]=c2);
 	Nand(a=reset, b=c0, out=nr);
 	Nand(a=load, b=c1, out=nl);
 	Nand(a=inc, b=c2, out=ni);
