@@ -16,9 +16,14 @@ CHIP PC {
     OUT out[16];
 
 PARTS:
-	Inc16(in=cout, out=cplus);							// COUNTER++
-	Mux16(a=cout, b=cplus, sel=inc, out=increment);		// apply COUNTER increment
-	Mux16(a=increment, b=false, sel=reset, out=zero);	// apply COUNTER reset
-	Mux16(a=zero, b=in, sel=load, out=lout);			// apply COUNTER load
-	Register(in=lout, out=out, load=true, out=cout);	// COUNTER data container
+	Register(in[0]=reset, in[1]=load, in[2]=inc, out[0]=c0, out[1]=c1, out[2]=c2);
+	Nand(a=reset, b=c0, out=nr);
+	Nand(a=load, b=c1, out=nl);
+	Nand(a=inc, b=c2, out=ni);
+	Or3Way(a=nr, b=nl, c=ni, out=change);
+	Mux16(a=cout, b=false, sel=reset, out=rout);				// apply COUNTER reset			
+	Mux16(a=rout, b=in, sel=load, out=lout);					// apply COUNTER load
+	Inc16(in=cout, out=cinc);									// COUNTER++
+	Mux16(a=lout, b=cinc, sel=inc, out=iout);					// apply COUNTER increment
+	Register(in=iout, out=out, load=change, out=cout);			// COUNTER data container
 }
