@@ -16,10 +16,10 @@ CHIP PC {
     OUT out[16];
 
 PARTS:
-	Register(load=rload, in=loriorr, out=regout);		// Increment
-	Inc16(in=regout, out=incout);						// Throw away overflow
-	Mux16(sel=load, a=incout, b=in, out=lori, out=out);	// Load
-	Mux16(sel=reset, a=lori, b=false, out=loriorr);		// Reset
+	Register(load=rload, in=loriorr, out=regout, out=out);	// Increment
+	Inc16(in=regout, out=incout);							// Throw away overflow
+	Mux16(sel=load, a=incout, b=in, out=lori);				// Load
+	Mux16(sel=reset, a=lori, b=false, out=loriorr);			// Reset
 	Nand(a=true, b=load, out=aout);
 	Nand(a=true, b=inc, out=bout);
 	Nand(a=true, b=reset, out=cout);
