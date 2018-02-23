@@ -16,7 +16,7 @@ CHIP PC {
     OUT out[16];
 
 PARTS:
-	Register(load=true, in[0]=reset, in[1]=load, in[2]=inc, out[0]=c0, out[1]=c1, out[2]=c2);
+/*	Register(load=true, in[0]=reset, in[1]=load, in[2]=inc, out[0]=c0, out[1]=c1, out[2]=c2);
 	Nand(a=reset, b=c0, out=nr);
 	Nand(a=load, b=c1, out=nl);
 	Nand(a=inc, b=c2, out=ni);
@@ -26,4 +26,10 @@ PARTS:
 	Inc16(in=cout, out=cinc);									// COUNTER++
 	Mux16(a=lout, b=cinc, sel=inc, out=iout);					// apply COUNTER increment
 	Register(in=iout, out=out, load=change, out=cout);			// COUNTER data container
+*/
+	Register(load=inc, in=loriorr, out=regout);
+	Inc16(in=regout, out=incout); // throw away overflow
+	Mux16(sel=load, a=incout, b=in, out=lori, out=out);
+	Mux16(sel=reset, a=lori, b=false, out=loriorr);
+
 }
