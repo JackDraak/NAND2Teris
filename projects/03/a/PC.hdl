@@ -25,5 +25,5 @@ PARTS:
 	Nand(a=true, b=reset, out=cout);
 	Nand(a=aout, b=bout, out=about);
 	Nand(a=true, b=about, out=abnot);
-	Nand(a=abnot, b=cout, out=rload);
+	Nand(a=abnot, b=cout, out=rload);						//  inc + load + reset
 }
