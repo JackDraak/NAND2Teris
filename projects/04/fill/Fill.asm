@@ -11,35 +11,58 @@
 // "white" in every pixel;
 // the screen should remain fully clear as long as no key is pressed.
 
+// declare initial state, for cleanliness
+	@state	
+	M=0		// state-awareness: 0=OFF, 1=ON
+
 // prepare a buffer size declaration
 	@SCREEN
 	D=A		// get address of screen buffer
 	@bottom
-	M=D		// bottom address of screen buffer
+	M=D		// set bottom address of screen buffer
 	@KBD
 	D=A		// get address of keyboard buffer
 	@top
-	M=D		// top address of screen buffer
+	M=D		// set top address of screen buffer
 	@bottom
-	D=D-M	// buff=top-bottom
+	D=D-M	// calc: buff=top-bottom
 	@buff
-	M=D		// size of screen buffer
+	M=D		// set size of screen buffer
 
 (INIT)
 	@pos
-	M=0
+	M=0		// initialize current position in screen buffer
 
+// reduced SCAN loop to eliminate screen buffer thrashing
 (SCAN)
 	@KBD
 	D=M		// check keyboard buffer
-	@OFF
+	@SWITCHOFF
 	D;JEQ	// off until input detected, else:
 
+// screen buffer is "state-aware", will only refresh when needed
+(SWITCHON)
+	@state
+	D=M
+	@SCAN
+	D-1;JEQ	// if already "ON", rescan
+	@ON
+	0;JMP	// else refresh "ON" state
+
+(SWITCHOFF)
+	@state
+	D=M
+	@SCAN
+	D;JEQ	// if already "OFF", rescan
+	@OFF
+	0;JMP	// else refresh "OFF" state
+
+// set entire screen buffer to "black"
 (ON)
 	@pos
 	D=M
 	@SCREEN
-	A=A+D	// select register using @pos
+	A=A+D	// select current register using @pos
 	M=-1	// set all bits in register to "black"
 	@pos
 	D=M+1	
@@ -48,14 +71,17 @@
 	D=D-M
 	@ON
 	D;JLT	// continue until finished
+	@state
+	M=1
 	@INIT
 	0;JMP
 
+// set entire screen buffer to "white"
 (OFF)
 	@pos
 	D=M
 	@SCREEN
-	A=A+D	// select register using @pos
+	A=A+D	// select current register using @pos
 	M=0		// set all bits in register to "white"
 	@pos
 	D=M+1	
@@ -64,9 +90,12 @@
 	D=D-M
 	@OFF
 	D;JLT	// continue until finished
+	@state
+	M=0
 	@INIT
 	0;JMP
 
+// requisite infinite loop
 (END)
 	@END
 	0;JMP
