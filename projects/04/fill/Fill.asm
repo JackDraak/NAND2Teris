@@ -1,46 +1,46 @@
 // make a buffer size declaration
-@KBD
-D=A
-@top
-M=D // top of memory range
-@SCREEN
-D=A
-@bottom
-M=D // bottom of memory range
-@top
-D=M
-@bottom
-D=D-M
-@buff
-M=D // size of buffer
-	
-(SCAN)
-	@KBD	// pointer to keyboard input
-	D=M		// read keyboard into D
-	@DARK
-	D;JNE	// on input, JMP to DARK 
-	@SCAN	// else, reSCAN
-	0;JMP
-(DARK)
-	@screenpos
-	M=0		// init position 0
-(SET)
-	// get and check offset
-	@screenpos
-	D=M
+	@SCREEN
+	D=A
+	@bottom
+	M=D // bottom of screen buffer
+	@KBD
+	D=A
+	@top
+	M=D // top of screen buffer
+	@bottom
+	D=D-M
 	@buff
+	M=D // size of buffer
+
+(SCAN)
+	@KBD
+	D=M
+	@SCAN
+	D;JEQ // scan until input detected, else:
+
+	@pos
+	M=0
+(SET)
+	@pos
+	D=M
+	@current
+	M=D //+@bottom
+	@bottom
+	D=M
+	@current
+	M=D+M
+	D=M
+	@D
+	M=-1
+	@pos
+	D=M+1
+	M=D
+	@top
 	D-M
 	@SCAN
-	D;JLE // SCAN if offset beyond bounds
-
-	@screenpos
-	D=M		// D = memory offset
-	@SCREEN+D
-	M=-1
-	@screenpos
-	M=D+1	// increment memory offset
-	@SET	// repeat until jumped 
-	0;JMP	
+	D;JEQ
+	@SET
+	0;JMP
 
 (END)
 	@END
