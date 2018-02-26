@@ -1,45 +1,43 @@
 // make a buffer size declaration
 	@SCREEN
-	D=A
+	D=A		// get address of screen buffer
 	@bottom
-	M=D // bottom of screen buffer
+	M=D		// bottom address of screen buffer
 	@KBD
-	D=A
+	D=A		// get address of keyboard buffer
 	@top
-	M=D // top of screen buffer
+	M=D		// top address of screen buffer
 	@bottom
-	D=D-M
+	D=D-M	// buff=top-bottom
 	@buff
-	M=D // size of buffer
+	M=D		// size of buffer
 
 (SCAN)
 	@KBD
-	D=M
+	D=M		// check keyboard buffer
 	@SCAN
-	D;JEQ // scan until input detected, else:
+	D;JEQ	// scan until input detected, else:
 
+	@SCREEN
+	D=A
 	@pos
-	M=0
+	M=D		// initialize procedure
 (SET)
 	@pos
 	D=M
 	@current
-	M=D //+@bottom
-	@bottom
-	D=M
-	@current
-	M=D+M
-	D=M
-	@D
+	M=D		// current = pos
+	A=D
+	@A		
 	M=-1
 	@pos
-	D=M+1
+	D=M+1	// increment register
 	M=D
 	@top
 	D-M
-	@SCAN
-	D;JEQ
 	@SET
+	D;JLT	// continue until finished
+	@SCAN
 	0;JMP
 
 (END)
