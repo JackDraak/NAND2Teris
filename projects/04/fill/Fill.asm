@@ -25,13 +25,16 @@
 (ON)
 	@pos
 	D=M
-	@SCREEN+D // going to RAM[20]... Why?!?!
+//	@SCREEN+D // going to RAM[20]... Why?!?!
+	@SCREEN
+	A=A+D	// doing it now in 2 steps.... WORKS!
 	M=-1
 	@pos
 	D=M+1	
 	M=D		// increment position register
 	@buff
 	D=D-M
+	D=D-1	// correct the end of buffer by 1 register... didn't fix the bounds
 	@ON
 	D;JLT	// continue until finished
 	@SCAN
