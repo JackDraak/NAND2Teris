@@ -34,9 +34,11 @@
 	M=D		// increment position register
 	@buff
 	D=D-M
-	D=D-1	// correct the end of buffer by 1 register... didn't fix the bounds
+//	D=D-1	// correct the end of buffer by 1 register... didn't fix the bounds
 	@ON
 	D;JLT	// continue until finished
+	@pos
+	M=0		// bounds issue resolved by resetting @pos here (duh)
 	@SCAN
 	0;JMP
 
