@@ -1,4 +1,4 @@
-// make a buffer size declaration
+// prepare a buffer size declaration
 	@SCREEN
 	D=A		// get address of screen buffer
 	@bottom
@@ -10,7 +10,11 @@
 	@bottom
 	D=D-M	// buff=top-bottom
 	@buff
-	M=D		// size of buffer
+	M=D		// size of screen buffer
+
+(INIT)
+	@pos
+	M=0
 
 (SCAN)
 	@KBD
@@ -18,24 +22,17 @@
 	@SCAN
 	D;JEQ	// scan until input detected, else:
 
-	@SCREEN
-	D=A
-	@pos
-	M=D		// initialize procedure
-(SET)
+(ON)
 	@pos
 	D=M
-	@current
-	M=D		// current = pos
-	A=D
-	@A		
+	@SCREEN+D // going to RAM[20]... Why?!?!
 	M=-1
 	@pos
-	D=M+1	// increment register
-	M=D
-	@top
-	D-M
-	@SET
+	D=M+1	
+	M=D		// increment position register
+	@buff
+	D=D-M
+	@ON
 	D;JLT	// continue until finished
 	@SCAN
 	0;JMP
