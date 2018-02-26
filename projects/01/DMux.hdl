@@ -14,7 +14,7 @@ CHIP DMux {
     OUT a, b;
 
 PARTS:
-/*
+/*  Prior design obsolete, kept for interest:
 	// a=in.!sel
 	// b=in.sel
 	And(a=in, b=sel, out=b);
