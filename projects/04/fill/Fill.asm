@@ -94,8 +94,3 @@
 	M=0
 	@INIT
 	0;JMP
-
-// requisite infinite loop
-(END)
-	@END
-	0;JMP

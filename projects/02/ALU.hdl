@@ -45,10 +45,10 @@ PARTS:
 	Mux16(a=yzy, b=negy, sel=ny, out=yny);
 
 // if (f == 0)  set out = x & y  // bitwise and
-	Add16(a=xnx, b=yny, out=fadd);
+	And16(a=xnx, b=yny, out=fand);
 
 // if (f == 1)  set out = x + y  // integer 2's complement addition
-	And16(a=xnx, b=yny, out=fand);
+	Add16(a=xnx, b=yny, out=fadd);
 	Mux16(a=fand, b=fadd, sel=f, out=fout);
 
 // if (no == 1) set out = !out   // bitwise not
