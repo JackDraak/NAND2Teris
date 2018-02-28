@@ -9,13 +9,21 @@
 
 CHIP HalfAdder {
     IN a, b;    // 1-bit inputs
-    OUT sum,    // Right bit of a + b	| A_Xor_B
-        carry;  // Left bit of a + b	| A.B
+    OUT sum,    // Right bit of a + b	|   sum = A_Xor_B
+        carry;  // Left bit of a + b	| carry = A.B
 
 PARTS:
-// This intuitive design can be optimized with 1 fewer NAND....
+// This intuitive design can be optimized with 1 fewer NAND, as I discovered 
+// while working on optimizations for the game: MHRD.
 /*	Xor(a=a, b=b, out=sum);
 	And(a=a, b=b, out=carry); */
+
+// I've used simple wire IDs because it's the easiest way to draft a chip design
+// on paper and copy it to HDL.  While they do not elucidate the logic at a glance,
+// leaving them 'simple' may facilitate re-drafting it. It's a chip that should 
+// really be seen as wires anyway, not HDL. :) Frankly, the only difference between
+// this chip and the one above is this one doesn't have two NANDs with the same inputs,
+// whereas the XOR/AND version does.
 	Nand(a=a, b=b, out=c);
 	Nand(a=a, b=c, out=d);
 	Nand(a=c, b=b, out=e);

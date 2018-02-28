@@ -12,6 +12,8 @@ CHIP Add16 {
     IN a[16], b[16];
     OUT out[16];
 
+// Per our spec we discard the final carry bit [nocon]. Only 2 inputs, so we can use a 
+// halfadder then daisy-chain it to 15 more FullAdder:
 PARTS:
 	HalfAdder(a=a[0], b=b[0], sum=out[0], carry=z);
 	FullAdder(a=a[1], b=b[1], sum=out[1], c=z, carry=y);
