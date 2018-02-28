@@ -14,8 +14,11 @@
 // declare initial state, for cleanliness
 	@state	
 	M=0		// state-awareness: 0=OFF, 1=ON
+			// While I'm happy with this optimization, I later learned 
+			// that it can be done much more elegantly... Perhaps I'll 
+			// need to revisit this design when I have the time.
 
-// prepare a buffer size declaration
+// prepare a buffer size declaration -- I've gone slightly overboard here, this can be optimized.
 	@SCREEN
 	D=A		// get address of screen buffer
 	@bottom
@@ -29,9 +32,13 @@
 	@buff
 	M=D		// set size of screen buffer
 
-(INIT)
+(INIT)		// called after any transition.
 	@pos
-	M=0		// initialize current position in screen buffer
+	M=0		// initialize current position in screen buffer -- after completing my design I saw a clever
+			// design that is bi-directional, and doesn't need to re-initialize the screen buffer offset
+			// (i.e. it turns on pixels walking one way through memory, then  clears them walking the
+			// other direction. If I work on this further I should try to do something similar.  That design
+			// also made my 'statefulness' look like child's-play with it's grace and "simplicity".)
 
 // reduced SCAN loop to eliminate screen buffer thrashing
 (SCAN)

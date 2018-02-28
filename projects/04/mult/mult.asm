@@ -41,5 +41,5 @@ M=D		// Update @count
 
 (END)
 @END
-0;JMP  // Infinite loop
+0;JMP  // Infinite loop when calculation complete (HACK requirement).
 
