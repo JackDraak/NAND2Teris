@@ -27,12 +27,9 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-    RAM16K(in=in, load=lram, address=address[0..13], out=lout);
-	Screen(in=in, load=hram, address=address[0..12], out=hout);
-	DMux(sel=address[14], in=load, a=kbd, b=mmem);
-	DMux(sel=address[13], in=mmem, a=lram, b=hram);
-	Mux16(sel=address[13], a=lout, b=hout, out=mout);
-	Mux16(sel=address[14], a=mout, b=keyboard, out=out);
-	Keyboard(out=keyboard); // when bits 14 & 15 are set use this register
-
+	DMux4Way(in=load, sel=address[13..14], a=ram, b=screen, d=keyboard);
+    RAM16K(in=in, load=ram, address=address[0..13], out=rout);
+	Screen(in=in, load=screen, address=address[0..12], out=sout);
+	Keyboard(out=kout);
+	Mux4Way16(a=rout, b=sout, d=kout, sel=address[13..14], out=out);
 }
