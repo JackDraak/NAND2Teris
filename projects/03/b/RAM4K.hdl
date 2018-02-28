@@ -14,6 +14,7 @@ CHIP RAM4K {
     IN in[16], load, address[12];
     OUT out[16];
 
+// Modeled on RAM8 design.
     PARTS:
 	DMux8Way(sel=address[9..11], in=load, a=a, b=b, c=c, d=d, e=e, f=f, g=g, h=h);
 	RAM512(in=in, out=aout, load=a, address=address[0..8]);
