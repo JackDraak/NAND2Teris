@@ -20,10 +20,10 @@ PARTS:
 	Inc16(in=regout, out=incout);							// Throw away overflow
 	Mux16(sel=load, a=incout, b=in, out=lori);				// Load
 	Mux16(sel=reset, a=lori, b=false, out=loriorr);			// Reset
-	Nand(a=true, b=load, out=aout);
-	Nand(a=true, b=inc, out=bout);
-	Nand(a=true, b=reset, out=cout);
-	Nand(a=aout, b=bout, out=about);
-	Nand(a=true, b=about, out=abnot);
+	Nand(a=true, b=load, out=aout);							//			-|
+	Nand(a=true, b=inc, out=bout);							//   -|		 |   
+	Nand(a=true, b=reset, out=cout);						//    |		 |	  -|
+	Nand(a=aout, b=bout, out=about);						//    |		 |	   |
+	Nand(a=true, b=about, out=abnot);						//    v		 v	   v
 	Nand(a=abnot, b=cout, out=rload);						//  inc + load + reset
 }
