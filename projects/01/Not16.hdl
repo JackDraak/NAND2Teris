@@ -12,6 +12,7 @@ CHIP Not16 {
     IN in[16];
     OUT out[16];
 
+// 16-bit NOT = 16 not's and a lot of wire:
 PARTS:
     Not(in=in[0], out=out[0]);
     Not(in=in[1], out=out[1]);

@@ -22,7 +22,7 @@ PARTS:
 	And(a=neqsel, b=in, out=a);
 */
 // I have a pattern for a 4-NAND 2-way DMux (1-NAND savings)
-// for optimization purposes:
+// for optimization purposes, thanks to playing MHRD:
 	Nand(a=sel, b=in, out=z);
 	Nand(a=z, b=in, out=y);
 	Nand(a=y, b=true, out=a);

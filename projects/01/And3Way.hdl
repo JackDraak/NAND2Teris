@@ -2,7 +2,7 @@ CHIP And3Way {
     IN a, b, c;
     OUT out;
 
-// Might be a better way to do this, just whipping a couple 3-ways together
+// Might be a better way to do this, just a quickie that might not be used again, though.
 PARTS:
     And(a=a, b=b, out=ab);
 	And(a=ab, b=c, out=out);

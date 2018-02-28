@@ -10,6 +10,12 @@ CHIP Mux4Way {
     IN a, b, c, d, sel[2];
     OUT out;
 
+// out = a.s1'.s2' + b.s1'.s2 + c.s1.s2' + d.s1.s2
+//
+// This took some work to think-out and draft. I suspect if I took the time to draft it in only NAND gates
+// some optimizations might be apparent, but for now, this works. You can literally see the equation above
+// in the hdl below, however... three +'s, three ORs... eight .'s, eight ANDs... two inversions and two NOT
+// gates.... maybe this is as good as it gets? As it stands, I see nothing extraneous.
 PARTS:
 	And(a=a, b=e, out=n);
 	And(a=l, b=m, out=e);

@@ -14,7 +14,7 @@ CHIP Xor {
 
 // It's possible this is more intuitivly resolved using AND, 
 // NOT & OR gates, but I already had a design drafted using
-// four NAND gates...
+// four NAND gates... [thanks to playing the game: MHRD]
 PARTS:
     Nand(a=a, b=nandab, out=ora);
     Nand(a=nandab, b=b, out=orb);
