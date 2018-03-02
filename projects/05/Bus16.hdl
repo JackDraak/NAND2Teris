@@ -1,0 +1,29 @@
+/**
+ * Maybe I missed how to manage an internal bus... 
+ * I'll have to review other solutions once I get my
+ * CPU working to see how it's been done by others.
+ */
+
+CHIP Bus16 {
+
+    IN in[16];
+	OUT out[16];
+
+PARTS:
+    Bus(in=in[0], out=out[0]);
+    Bus(in=in[1], out=out[1]);
+    Bus(in=in[2], out=out[2]);
+    Bus(in=in[3], out=out[3]);
+    Bus(in=in[4], out=out[4]);
+    Bus(in=in[5], out=out[5]);
+    Bus(in=in[6], out=out[6]);
+    Bus(in=in[7], out=out[7]);
+    Bus(in=in[8], out=out[8]);
+    Bus(in=in[9], out=out[9]);
+    Bus(in=in[10], out=out[10]);
+    Bus(in=in[11], out=out[11]);
+    Bus(in=in[12], out=out[12]);
+    Bus(in=in[13], out=out[13]);
+    Bus(in=in[14], out=out[14]);
+    Bus(in=in[15], out=out[15]);
+}

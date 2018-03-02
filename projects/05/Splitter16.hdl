@@ -1,0 +1,14 @@
+/**
+ * Maybe I missed how to manage an internal bus... 
+ * I'll have to review other solutions once I get my
+ * CPU working to see how it's been done by others.
+ */
+
+CHIP Splitter16 {
+
+    IN in[16];
+	OUT one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen;
+
+PARTS:
+	Bus16(in=in, out[0]=one, out[1]=two, out[2]=three, out[3]=four, out[4]=five, out[5]=six, out[6]=seven, out[7]=eight, out[8]=nine, out[9]=ten, out[10]=eleven, out[11]=twelve, out[12]=thirteen, out[13]=fourteen, out[14]=fifteen, out[15]=sixteen);
+}

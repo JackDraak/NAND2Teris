@@ -38,9 +38,26 @@ CHIP CPU {
         addressM[15],    // Address in data memory (of M)
         pc[15];          // address of next instruction
 
+	// Still unsure what to do with instruction bit 13 (counting from 1) the 'a' instruction
     PARTS:
-		ARegister();
-		DRegister();
-		ALU();
-		PC();
+		Splitter16(in=instruction, one=jgz, two=jez, three=jlz, four=lm, five=ld, six=la, seven=no, eight=f, nine=ny, ten=zy, eleven=nx, twelve=zx, thirteen=a, sixteen=c);
+		ALU(out=aluo, out=outM, zr=zr, ng=ng, x=drout, y=mmux, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
+		PC(inc=true, load=pcl, in=arout, reset=reset, out[0..14]=pc);
+		
+		ARegister(out=arout, in=amux, load=arl);
+		DRegister(out=drout, in=aluo, load=ld);
+
+		Mux16(a=aluo, b=instruction, sel=la, out=amux);
+		Mux16(a=arout, b=inM, sel=lm, out=mmux);
+		
+		Not(in=c, out=nc);
+		Or(a=nc, b=jlz, out=arl);
+		
+		Not(in=ng, out=nng);
+		Not(in=zr, out=nzr);
+		And(a=nng, b=nzr, out=gand1);
+		And(a=gand1, b=jgz, out=gand);
+		And(a=zr, b=jez, out=eand);
+		And(a=ng, b=jlz, out=land);
+		Or3Way(out=pcl, a=gand, b=eand, c=land);
 }
