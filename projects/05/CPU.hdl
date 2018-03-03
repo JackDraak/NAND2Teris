@@ -43,7 +43,7 @@ CHIP CPU {
 		ALU(out=aluo, out=outM, zr=zr, ng=ng, x=drout, y=mmux, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
 		PC(inc=true, load=pcl, in=arout, reset=reset, out[0..14]=pc);
 		
-		ARegister(out=arout, in=amux, load=arl);
+		ARegister(out=arout, out[0..14]=addressM, in=amux, load=arl);
 		DRegister(out=drout, in=aluo, load=ld);
 
 		Mux16(a=aluo, b=instruction, sel=la, out=amux);
