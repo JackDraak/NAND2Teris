@@ -12,7 +12,7 @@ CHIP Inc16 {
     IN in[16];
     OUT out[16];
 
-// "Trivial to implement".  Here, I've decided to use the 16-bit Adder.
+// "Trivial to implement".  Here, I've decided to use the 16-bit Adder with a 'constant' on the a-input.
 PARTS:
 	Add16(a[0]=true, b=in, out=out);
 }

@@ -14,6 +14,7 @@ CHIP RAM16K {
     IN in[16], load, address[14];
     OUT out[16];
 
+// Modeled on RAM8 design, but with fewer memory cells (4 vs. 8).
     PARTS:
 	DMux4Way(sel=address[12..13], in=load, a=a, b=b, c=c, d=d);
 	RAM4K(in=in, out=aout, load=a, address=address[0..11]);

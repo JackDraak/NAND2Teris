@@ -12,7 +12,8 @@ CHIP Not {
     IN in;
     OUT out;
 
-// The NAND b-in can be either 'in' or 'true' to make it a NOT gate.
+// The NAND b-in can be either 'in' or 'true' to make it a NOT gate (technically, either A or B).
+// Of course the in can also fan-out to both A & B, but I wanted to use the true statement for a change.
 PARTS:
     Nand(a=in, b=true, out=out);
 }

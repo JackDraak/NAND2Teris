@@ -15,6 +15,7 @@ CHIP And {
 
 // Minimum of two NAND required to make an AND from them. The NOT gate
 // used here is actually just another NAND with the b-in set to TRUE.
+
 PARTS:
     Nand(a=a, b=b, out=neq);
     Not(in=neq, out=out);

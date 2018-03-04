@@ -15,6 +15,7 @@ CHIP DMux4Way {
     IN in, sel[2];
     OUT a, b, c, d;
 
+// As per Mux4Way, "think forks". One DMux for the high selection bit, two for the low selection bit. 
 PARTS:
 	DMux(in=in, sel=sel[1], a=ab, b=cd);
 	DMux(in=ab, sel=sel[0], a=a, b=b);

@@ -13,6 +13,8 @@ CHIP Mux16 {
     IN a[16], b[16], sel;
     OUT out[16];
 
+// The only difference between this and my other 'simple' 16-bit chips, is that the single selection bit 
+// needs to fan-out to all 16 internal Mux chips.
 PARTS:
     Mux(sel=sel, a=a[0], b=b[0], out=out[0]);
     Mux(sel=sel, a=a[1], b=b[1], out=out[1]);

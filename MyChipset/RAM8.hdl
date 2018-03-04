@@ -14,6 +14,9 @@ CHIP RAM8 {
     IN in[16], load, address[3];
     OUT out[16];
 
+// At first I was trying to feed my IN bits all through multiplexors. Derp.  By directing the load
+// bits and feeding all registers the input, we can keep it much simpler. We do, however, still need 
+// a 16-bit multiplexor for the output:
 PARTS:
 	DMux8Way(sel=address, in=load, a=a, b=b, c=c, d=d, e=e, f=f, g=g, h=h);
 	Register(in=in, out=aout, load=a);

@@ -13,6 +13,7 @@ CHIP Bit {
     IN in, load;
     OUT out;
 
+// Use of Mux to insert new value into DFF via load bit, otherwise DFF reloads prior value each tick/tock.
 PARTS:
 	Mux(a=dff, b=in, sel=load, out=mux);
 	DFF(in=mux, out=dff, out=out);

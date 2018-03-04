@@ -13,6 +13,7 @@ CHIP Register {
     IN in[16], load;
     OUT out[16];
 
+// Similar to my Mux16, the register load-bit must fan-out to all 16 bits: when one is set, all are set.
 PARTS:
 	Bit(in=in[0], load=load, out=out[0]);
 	Bit(in=in[1], load=load, out=out[1]);

@@ -33,14 +33,14 @@ PARTS:
 	Or(a=and1, b=and2, out=out);
 // Instructor says this "can be done with 3 gates [Or, Not, And]". 
 // I reviewed my work, and can come up with a different solution, but
-// it uses the same # of gates: A(B+C')+B.C = F
+// it uses the same # of gates: A(B+C')+B.C = F, thus my third draft:
 	And(a=b, b=sel, out=z);
 	Not(in=sel, out=nsel);
 	Or(a=b, b=nsel, out=y);
 	And(a=a, b=y, out=x);
 	Or(a=z, b=x, out=out);
 */
-// My MHRD Mux is only 4 NANDs...
+// My MHRD Mux is only 4 NANDs... may as well use it here!
 // out = Nand(Nand(b.sel).Nand(a.Nand(sel.true)))
 	Nand(a=sel, b=true, out=n4);
 	Nand(a=b, b=sel, out=n3);
