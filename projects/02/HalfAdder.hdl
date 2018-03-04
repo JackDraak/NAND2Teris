@@ -18,7 +18,7 @@ PARTS:
 /*	Xor(a=a, b=b, out=sum);
 	And(a=a, b=b, out=carry); */
 
-// I've used simple wire IDs because it's the easiest way to draft a chip design
+// I've used simple wire IDs because it's the easiest way (for me) to draft a chip design
 // on paper and copy it to HDL.  While they do not elucidate the logic at a glance,
 // leaving them 'simple' may facilitate re-drafting it. It's a chip that should 
 // really be seen as wires anyway, not HDL. :) Frankly, the only difference between

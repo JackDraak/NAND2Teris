@@ -6,9 +6,20 @@
 
 CHIP Splitter16 {
 
+	// Okay this isn't my prettiest work, to be sure.  I'm mostly certain I've missed something about 
+	// using an internal bus, however, so I don't want to put too much effort into it until I get the 
+	// CPU working to spec. (Maybe then I can discover a better way to do the internal bus alltogether.)
+
     IN in[16];
-	OUT one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen;
+	OUT 
+		one, two, three, four, 
+		five, six, seven, eight, 
+		nine, ten, eleven, twelve, 
+		thirteen, fourteen, fifteen, sixteen;
 
 PARTS:
-	Bus16(in=in, out[0]=one, out[1]=two, out[2]=three, out[3]=four, out[4]=five, out[5]=six, out[6]=seven, out[7]=eight, out[8]=nine, out[9]=ten, out[10]=eleven, out[11]=twelve, out[12]=thirteen, out[13]=fourteen, out[14]=fifteen, out[15]=sixteen);
+	Bus16(in=in, out[0]=one, out[1]=two, out[2]=three, out[3]=four, 
+		out[4]=five, out[5]=six, out[6]=seven, out[7]=eight, 
+		out[8]=nine, out[9]=ten, out[10]=eleven, out[11]=twelve, 
+		out[12]=thirteen, out[13]=fourteen, out[14]=fifteen, out[15]=sixteen);
 }
