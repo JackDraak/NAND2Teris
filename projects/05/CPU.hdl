@@ -39,14 +39,20 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-		Splitter16(in=instruction, one=jgz, two=jez, three=jlz, four=lm, five=ld, six=la, seven=no, eight=f, nine=ny, ten=zy, eleven=nx, twelve=zx, thirteen=a, thirteen=writeM, sixteen=c);
-		ALU(out=aluo, out=outM, zr=zr, ng=ng, x=drout, y=mmux, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
+		Splitter16(
+			in=instruction, one=jgz, two=jez, three=jlz, four=ml, 
+			five=drl, six=al, seven=no, eight=f, nine=ny, ten=zy, 
+			eleven=nx, twelve=zx, thirteen=a, thirteen=writeM, sixteen=c);
+
+		ALU(out=aluo, zr=zr, ng=ng, x=drout, y=mmux, 
+			zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
+
 		PC(inc=true, load=pcl, in=arout, reset=reset, out[0..14]=pc);
 		
 		ARegister(out=arout, out[0..14]=addressM, in=amux, load=arl);
-		DRegister(out=drout, in=aluo, load=ld);
+		DRegister(out=drout, in=aluo, load=drl);
 
-		Mux16(a=aluo, b=instruction, sel=la, out=amux);
+		Mux16(a=aluo, b=instruction, sel=nc, out=amux);
 		Mux16(a=arout, b=inM, sel=a, out=mmux);
 		
 		Not(in=c, out=nc);
