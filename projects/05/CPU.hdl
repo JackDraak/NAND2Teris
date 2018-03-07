@@ -40,29 +40,29 @@ CHIP CPU {
 
     PARTS:
 		Splitter16(
-			in=instruction, one=jgz, two=jez, three=jlz, four=ml, 
-			five=drl, six=al, seven=no, eight=f, nine=ny, ten=zy, 
-			eleven=nx, twelve=zx, thirteen=a, thirteen=writeM, sixteen=c);
+			in=instruction, one=jg, two=je, three=jl, four=lm, 
+			five=ld, six=la, seven=no, eight=f, nine=ny, ten=zy, 
+			eleven=nx, twelve=zx, thirteen=mbit, sixteen=c);
 
 		ALU(out=aluo, zr=zr, ng=ng, x=drout, y=mmux, 
 			zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
 
-		PC(inc=true, load=pcl, in=arout, reset=reset, out[0..14]=pc);
+		PC(inc=true, load=jmp, in=arout, reset=reset, out[0..14]=pc);
 		
-		ARegister(out=arout, out[0..14]=addressM, in=amux, load=arl);
-		DRegister(out=drout, in=aluo, load=drl);
+		ARegister(out=arout, out[0..14]=addressM, in=amux, load=la);
+		DRegister(out=drout, in=aluo, load=ld);
 
-		Mux16(a=aluo, b=instruction, sel=nc, out=amux);
-		Mux16(a=arout, b=inM, sel=a, out=mmux);
+		Mux16(a=aluo, b=instruction, sel=ncorda, out=amux);
+		Mux16(a=arout, b=inM, sel=mbit, out=mmux);
 		
 		Not(in=c, out=nc);
-		Or(a=nc, b=jlz, out=arl);
+		Or(a=nc, b=jl, out=ncorda);
 		
 		Not(in=ng, out=nng);
 		Not(in=zr, out=nzr);
 		And(a=nng, b=nzr, out=gand1);
-		And(a=gand1, b=jgz, out=gand);
-		And(a=zr, b=jez, out=eand);
-		And(a=ng, b=jlz, out=land);
-		Or3Way(out=pcl, a=gand, b=eand, c=land);
+		And(a=gand1, b=jg, out=gand);			// greater than zero
+		And(a=zr, b=je, out=eand);				// equal to zero
+		And(a=ng, b=jl, out=land);				// less than zero
+		Or3Way(out=jmp, a=gand, b=eand, c=land);
 }
