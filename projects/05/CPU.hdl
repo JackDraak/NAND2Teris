@@ -47,7 +47,7 @@ CHIP CPU {
 		DRegister(out=drout, in=aluo, load=ld);
 
 		Not(in=cbit, out=nc);
-		Or(a=nc, b=jl, out=ncorda);	// what am I doing with b=jl here? ...late-night-coding...
+		Or(a=nc, b=lra, out=ncorda);	// what am I doing with b=jl here? ...late-night-coding... b=lra makes more sense, no?
 		Mux16(a=aluo, b=instruction, sel=ncorda, out=amux);
 		Mux16(a=arout, b=inM, sel=mbit, out=mmux);
 				
