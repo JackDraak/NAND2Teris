@@ -39,25 +39,18 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-		Splitter16(
-			in=instruction, one=jg, two=je, three=jl, four=lm, 
-			five=ld, six=la, seven=no, eight=f, nine=ny, ten=zy, 
-			eleven=nx, twelve=zx, thirteen=mbit, sixteen=c);
-
-		ALU(out=aluo, zr=zr, ng=ng, x=drout, y=mmux, 
-			zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
-
+		Splitter16(in=instruction, a=jg,b=je,c=jl, d=writeM,e=ld,f=la, g=no,h=f,i=ny,j=zy,k=nx,l=zx, m=mbit,p=cbit);
+		ALU(out=aluo, zr=zr, ng=ng, x=drout, y=mmux, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
 		PC(inc=true, load=jmp, in=arout, reset=reset, out[0..14]=pc);
-		
-		ARegister(out=arout, out[0..14]=addressM, in=amux, load=la);
+		Or(a=nc, b=la, out=lra);
+		ARegister(out=arout, out[0..14]=addressM, in=amux, load=lra);
 		DRegister(out=drout, in=aluo, load=ld);
 
+		Not(in=cbit, out=nc);
+		Or(a=nc, b=jl, out=ncorda);	// what am I doing with b=jl here? ...late-night-coding...
 		Mux16(a=aluo, b=instruction, sel=ncorda, out=amux);
 		Mux16(a=arout, b=inM, sel=mbit, out=mmux);
-		
-		Not(in=c, out=nc);
-		Or(a=nc, b=jl, out=ncorda);
-		
+				
 		Not(in=ng, out=nng);
 		Not(in=zr, out=nzr);
 		And(a=nng, b=nzr, out=gand1);
