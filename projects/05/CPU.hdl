@@ -42,13 +42,16 @@ CHIP CPU {
 		Splitter16(in=instruction, a=jg,b=je,c=jl, d=writeM,e=ld,f=la, g=no,h=f,i=ny,j=zy,k=nx,l=zx, m=mbit,p=cbit);
 		ALU(out=aluo, zr=zr, ng=ng, x=drout, y=mmux, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
 		PC(inc=true, load=jmp, in=arout, reset=reset, out[0..14]=pc);
-		Or(a=nc, b=la, out=lra);
+		Or(a=nc, b=la, out=lra);	// load register a (lra=1) when: nc (a instruction) or la (load a)
 		ARegister(out=arout, out[0..14]=addressM, in=amux, load=lra);
 		DRegister(out=drout, in=aluo, load=ld);
 
+		// this can almost certainly be optimized -- 
+		// if you see my history, you know that for now, I'm just trying to pass spec.
 		Not(in=cbit, out=nc);
-		Or(a=nc, b=lra, out=ncorda);	// what am I doing with b=jl here? ...late-night-coding... b=lra makes more sense, no?
-		Mux16(a=aluo, b=instruction, sel=ncorda, out=amux);
+		// Not(in=la, out=nla); // this has got to be wrong.... seriously?
+		// Or(a=nc, b=nla, out=ncorla);
+		Mux16(a=aluo, b=instruction, sel=nc, out=amux);		// mux from 'b' when a-instruction (otherwise 'a'?)
 		Mux16(a=arout, b=inM, sel=mbit, out=mmux);
 				
 		Not(in=ng, out=nng);
