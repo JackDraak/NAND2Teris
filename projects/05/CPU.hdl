@@ -39,20 +39,19 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-		Splitter16(in=instruction, a=jg,b=je,c=jl, d=writeM,e=ld,f=la, g=no,h=f,i=ny,j=zy,k=nx,l=zx, m=mbit,p=cbit);
-		ALU(out=aluo, zr=zr, ng=ng, x=drout, y=mmux, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
+		Splitter16(in=instruction, a=jg,b=je,c=jl, d=writeM,e=ld,f=la, g=no,h=f,i=ny,j=zy,k=nx,l=zx, m=mbit,p=acbit);
+		Not(in=acbit, out=nac);
+		Or(a=nac, b=la, out=lra);	// load register a (lra=1) when: nc (a instruction) or la (load a)
 		PC(inc=true, load=jmp, in=arout, reset=reset, out[0..14]=pc);
-		Or(a=nc, b=la, out=lra);	// load register a (lra=1) when: nc (a instruction) or la (load a)
-		ARegister(out=arout, out[0..14]=addressM, in=amux, load=lra);
-		DRegister(out=drout, in=aluo, load=ld);
 
-		// this can almost certainly be optimized -- 
-		// if you see my history, you know that for now, I'm just trying to pass spec.
-		Not(in=cbit, out=nc);
-		// Not(in=la, out=nla); // this has got to be wrong.... seriously?
-		// Or(a=nc, b=nla, out=ncorla);
-		Mux16(a=aluo, b=instruction, sel=nc, out=amux);		// mux from 'b' when a-instruction (otherwise 'a'?)
+		// when m-bit is on... , off....
+
+		ARegister(out=arout, out[0..14]=addressM, in=amux, load=lra);
+		Mux16(a=aluo, b=instruction, sel=nac, out=amux);		// mux from 'b' when a-instruction (otherwise 'a'?)
+		
+		DRegister(out=drout, in=aluo, load=ld);
 		Mux16(a=arout, b=inM, sel=mbit, out=mmux);
+		ALU(out=aluo, out=outM, zr=zr, ng=ng, x=drout, y=mmux, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
 				
 		Not(in=ng, out=nng);
 		Not(in=zr, out=nzr);
