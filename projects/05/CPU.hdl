@@ -39,31 +39,43 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-		Splitter16(in=instruction, a=jg,b=je,c=jl, d=lm,d=writeM,e=ld,f=la, g=no,h=f,i=ny,j=zy,k=nx,l=zx, m=ambit,p=acbit);
-		Not(in=acbit, out=nac);
-		PC(inc=true, load=jmp, in=arout, reset=reset, out[0..14]=pc);
+		// Decode controller:
+		// I've made a 1-bit "Bus" chip, then a 16-bit version, and used that to make "Splitter". I'm sure I missed 
+		// (or misunderstood) something in Apendix A that would reveal this to be 'busywork', but it does the job.
+		// Only C-instructions need to be decoded:
+		Mux16(b=instruction, sel=instruction[15], out=cin);	// use c-bit to send c-instructions to the splitter (decoder)
+		Splitter16(in=cin, a=jg,b=je,c=jl, d=lm,d=writeM,e=ld,f=la, g=no,h=f,i=ny,j=zy,k=nx,l=zx, m=ambit,p=acbit);
 
-		// ARegister must load 'instruction' for @-instructions
-		// ARegister must load 'aluo' for 'la' bit durring instruction cycles
-		And(a=acbit, b=la, out=lmar);						// load register a (lmar=1) when: acbit (c instruction) and la (load a)
+
+		// ARegister must load 'instruction' for @-instructions.
+		// ARegister must load 'aluo' for 'la' bit durring c-instruction cycles.
+		Not(in=acbit, out=nac);								// invert acbit to trigger @-instruction cycle
 		Or(a=nac, b=lmar, out=lra);							// load register a (lra=1) when: nc (a instruction) or lmar (load a)
-		Or(a=lmar, b=lra, out=lramar);						// ARegister trigger
-		Mux16(a=aluo, b=instruction, sel=nac, out=amux);	// mux from 'b' when a-instruction (otherwise 'a'?)
+		And(a=acbit, b=la, out=lmar);						// load register a (lmar=1) when: acbit (c instruction) and la (load a)
+		Or(a=lmar, b=lra, out=lramar);						// ARegister load-trigger
+		Mux16(a=aluo, b=instruction, sel=nac, out=amux);	// mux from 'b' when a-instruction (otherwise 'a'?) ~NB
 		ARegister(out=arout, out[0..14]=addressM, in=amux, load=lramar);
 		
+		// DRegister must lode when ld=true.
 		DRegister(out=drout, in=aluo, load=ld);				// so easy!
 
-		// when am-bit is on: D&|M operation, when am-bit is off: D&|A operation
+		// am-bit controller:
+		// when am-bit is on: D&|M operation, when am-bit is off: D&|A operation.
 		Mux16(a=arout, b=inM, sel=ambit, out=amy); // do I need to swap my x & y? sending D to x, A|M to y....
 		ALU(out=aluo, zr=zr, ng=ng, x=drout, y=amy, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
-
+		
+		// lm-bit controller:
 		Mux16(b=aluo, sel=lm, out=outM);	// somewhat unneeded, but I note the .cmp file has xxxxxxxx for most outM. This outputs 0. 
 
-		Not(in=ng, out=nng);					// invert ng & zr to identify when 'aluo' is positive
-		Not(in=zr, out=nzr);					// invert ng & zr to identify when 'aluo' is positive
-		And(a=nng, b=nzr, out=gand1);			// when neiter negative nor zero, output positive
-		And(a=gand1, b=jg, out=gand);			// greater than zero jump
-		And(a=zr, b=je, out=eand);				// equal to zero jump
-		And(a=ng, b=jl, out=land);				// less than zero jump
+		// Jump controller:
+		Not(in=ng, out=nng);					// invert ng & zr to identify when 'aluo' is positive.
+		Not(in=zr, out=nzr);					// invert ng & zr to identify when 'aluo' is positive.
+		And(a=nng, b=nzr, out=gand1);			// when neiter negative nor zero, output positive.
+		And(a=gand1, b=jg, out=gand);			// greater than zero jump.
+		And(a=zr, b=je, out=eand);				// equal to zero jump.
+		And(a=ng, b=jl, out=land);				// less than zero jump.
 		Or3Way(out=jmp, a=gand, b=eand, c=land);
+
+		// Program controller:
+		PC(inc=true, load=jmp, in=arout, reset=reset, out[0..14]=pc);	// always increment unless superceeded by load or reset.
 }
