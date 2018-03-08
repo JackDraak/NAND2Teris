@@ -41,23 +41,29 @@ CHIP CPU {
     PARTS:
 		Splitter16(in=instruction, a=jg,b=je,c=jl, d=lm,d=writeM,e=ld,f=la, g=no,h=f,i=ny,j=zy,k=nx,l=zx, m=ambit,p=acbit);
 		Not(in=acbit, out=nac);
-		Or(a=nac, b=la, out=lra);	// load register a (lra=1) when: nc (a instruction) or la (load a)
 		PC(inc=true, load=jmp, in=arout, reset=reset, out[0..14]=pc);
 
-		ARegister(out=arout, out[0..14]=addressM, in=amux, load=lra);
-		Mux16(a=aluo, b=instruction, sel=nac, out=amux);		// mux from 'b' when a-instruction (otherwise 'a'?)
+		// ARegister must load 'instruction' for @-instructions
+		// ARegister must load 'aluo' for 'la' bit durring instruction cycles
+		And(a=acbit, b=la, out=lmar);						// load register a (lmar=1) when: acbit (c instruction) and la (load a)
+		Or(a=nac, b=lmar, out=lra);							// load register a (lra=1) when: nc (a instruction) or lmar (load a)
+		Or(a=lmar, b=lra, out=lramar);						// ARegister trigger
+		Mux16(a=aluo, b=instruction, sel=nac, out=amux);	// mux from 'b' when a-instruction (otherwise 'a'?)
+		ARegister(out=arout, out[0..14]=addressM, in=amux, load=lramar);
 		
-		// when am-bit is on... D&|M operation, off.... D&|A operation
-		DRegister(out=drout, in=aluo, load=ld);
+		DRegister(out=drout, in=aluo, load=ld);				// so easy!
+
+		// when am-bit is on: D&|M operation, when am-bit is off: D&|A operation
 		Mux16(a=arout, b=inM, sel=ambit, out=amy); // do I need to swap my x & y? sending D to x, A|M to y....
 		ALU(out=aluo, zr=zr, ng=ng, x=drout, y=amy, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
-		Mux16(b=aluo, sel=lm, out=outM);		
 
-		Not(in=ng, out=nng);
-		Not(in=zr, out=nzr);
-		And(a=nng, b=nzr, out=gand1);
-		And(a=gand1, b=jg, out=gand);			// greater than zero
-		And(a=zr, b=je, out=eand);				// equal to zero
-		And(a=ng, b=jl, out=land);				// less than zero
+		Mux16(b=aluo, sel=lm, out=outM);	// somewhat unneeded, but I note the .cmp file has xxxxxxxx for most outM. This outputs 0. 
+
+		Not(in=ng, out=nng);					// invert ng & zr to identify when 'aluo' is positive
+		Not(in=zr, out=nzr);					// invert ng & zr to identify when 'aluo' is positive
+		And(a=nng, b=nzr, out=gand1);			// when neiter negative nor zero, output positive
+		And(a=gand1, b=jg, out=gand);			// greater than zero jump
+		And(a=zr, b=je, out=eand);				// equal to zero jump
+		And(a=ng, b=jl, out=land);				// less than zero jump
 		Or3Way(out=jmp, a=gand, b=eand, c=land);
 }
