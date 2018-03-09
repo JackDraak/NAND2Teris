@@ -22,16 +22,35 @@ namespace Hacksemmbler
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
-            for(int i = 0; i < args.Length; i++)
+            Console.WriteLine("Hello World!"); // debug
+            for(int i = 0; i < args.Length; i++) // debug
             {
                 Console.WriteLine("Arg {0} : {1}", i, args[i]);
             }
 
+            int lines = 0;
             foreach (string instruction in File.ReadAllLines(args[0]))
             {
-                Console.WriteLine($"Instruction: {instruction}");
+                Console.WriteLine($"{lines}. Instruction: {instruction}"); // debug
+
+                // CODE: if instruction is !comment or whitespace, increment lines counter
+                lines++;
             }
+
+            // strip comment lines, build inputFIle_stripped
+            string[] inputFile_stripped = new string[lines];
+            int offset = 0;
+            foreach (string instruction in File.ReadAllLines(args[0]))
+            {
+                // if instruction is !comment or whitespace, add to program
+                inputFile_stripped[offset] = instruction;
+                offset++;
+            }
+
+            Console.WriteLine($"lines: {lines} vs. offset: {offset}");
+
+
+
 
             Console.ReadLine();
         }
