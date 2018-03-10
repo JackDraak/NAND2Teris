@@ -21,121 +21,157 @@ namespace Hacksemmbler
 {
     class Program
     {
+        struct c_instruction
+        {
+            public string comp;
+            public string dest;
+            public string jump;
+        };
+
+
         static void Main(string[] args)
         {
-            // output for debug purposes, primarilly
-            for(int i = 0; i < args.Length; i++)
-            {
-                Console.WriteLine($"Arg {i} : {args[i]}");
-            }
+            // debug output
+            //for(int i = 0; i < args.Length; i++) { Console.WriteLine($"Arg {i} : {args[i]}"); }
 
-            // count which argument we're processing; allows for batch-processing
+            // count which argument [input file] we're processing; <<setting-up to allow for batch-processing>>
             int argument = 0;
 
-            // initialize some variable we need for our nexr process
+            // initialize some variables
             int inFile_length = 0;
-            int lines = 0; 
+            int significant_lines = 0; 
 
+            // discover length of input filestream
             foreach (string instruction in File.ReadAllLines(args[argument]))
             {
                 inFile_length++;
                 ///Console.WriteLine($"{lines}. Instruction: {instruction}"); // debug
-                // ADD CODE HERE: if instruction is !comment or whitespace, increment lines counter
-                lines++;
+                // <<ADD CODE HERE:>> if instruction is !comment or whitespace, increment significant_lines counter
+                significant_lines++; // get # of lines that have symbols or directives
             }
-
-            // // Strip comment lines, build inputFile_stripped array:
             // initialize code buffer
-            string[] inputFile_stripped = new string[lines];
-            int offset = 0;
+            string[] inputFile_stripped = new string[significant_lines];
 
+            // strip non-instruction lines, build inputFile_stripped array:
+            int filesize_offset = 0;
             foreach (string instruction in File.ReadAllLines(args[argument]))
             {
-                // ADD CODE HERE: if instruction is !comment or whitespace, add to inputFile_stripped[]
-                inputFile_stripped[offset] = instruction; // for now, let's focus on a simple .asm input, however.
-                offset++;
+                // <<ADD CODE HERE:>> if instruction is !comment or whitespace, add to inputFile_stripped[]
+                inputFile_stripped[filesize_offset] = instruction; // for now, let's focus on a simple .asm input, however.
+                filesize_offset++;
             }
 
             // parse input file
-            offset = 0;
-            foreach (string instruction in File.ReadAllLines(args[argument]))
+            int stripped_offset = 0;
+            string encoded_instruction = "\0";
+            c_instruction compDestJump;
+            List<String> outStream = new List<String>();
+            foreach (string instruction in inputFile_stripped)
             {
-                int size = instruction.Length;
-                if (size > 0)
+                if (instruction.Length > 0)
                 {
                     char test = instruction[0];
-
                     // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
                     if (test == '@')
                     {
-                        // extract @ddress (as string, then convert to integer, then to binary)
-                        String address = CleanAddress(instruction);
-
-                        // convert to integer
-                        int address_integer;
-                        bool success = int.TryParse(address, out address_integer);
-                        if (!success) Console.WriteLine("FAIL: convert address to integer.");
-
-                        // convert address to binary
-                        int place = 0;
-                        int remainder = 0;
-                        bool resolved = false;
-                        String binary_address = "\0";
-                        int address_to_convert = address_integer;
-                        while (!resolved)
-                        {
-                            Math.DivRem(address_to_convert, 2, out remainder);
-                            address_to_convert = address_to_convert / 2;
-                            binary_address = StringPrepender(binary_address, remainder.ToString());
-                            place++;
-                            if (address_to_convert == 0) resolved = true;
-                        }
-                        while (place < 15)
-                        {
-                            binary_address = StringPrepender(binary_address, "0");
-                            place++;
-                        }
-
-                        Console.WriteLine($"{success} -- " +
-                                            $"line({offset}) -- " +
-                                            $"integer: {address_integer} " +
-                                            $"from string: {address} " +
-                                            $"as binary: {binary_address}"); // debug
-                    }         
+                        encoded_instruction = Encode16BitAddress(stripped_offset, instruction);
+                        ///Console.WriteLine($"stripped line number: {stripped_offset} @ddress as 16-bit binary: {encoded_instruction}"); // debug output             
+                    }
+                    // parse C-instructions <<and later, handle symbols and pointers.... here, or prior to here>>
+                    else
+                    {
+                        // C-instruction format [comp=dest;jump]:  1-1-1-a  c-c-c-c  c-c-d-d  d-j-j-j
+                        compDestJump = ParseInstruction(instruction);
+                        encoded_instruction = EncodeCInstruction(compDestJump);
+                    }
+                    // stack lines in array for dumping as output filestream
+                    outStream.Add(encoded_instruction);
                 }
-                offset++;
+                stripped_offset++;
             }
 
-            Console.WriteLine($"lines: {lines} vs. offset: {offset}");
+            //debug: output what we have so far
+            for (int i = 0; i < outStream.Count; i++)
+            {
+                Console.WriteLine($"offset: {i}\t\tencoded: {outStream.ElementAt(i)}");
+            }
+
+            ///Console.WriteLine($"lines: {significant_lines} vs. offset: {stripped_offset}"); // debug output
 
             // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
             // Chill until user hits enter or return, then exit.
+            Console.WriteLine("...\nBatch complete. Press <Enter> to close window.");
             Console.ReadLine();
         }
 
+        //
+        // // // // Internal methods // // // //
+        //
+
+        private static string EncodeCInstruction(c_instruction cInst)
+        {
+            String encoded_directive = "Code me.\0";
+            return encoded_directive;
+        }
+
+        private static string Encode16BitAddress(int offset, string instruction)
+        {
+            // extract @ddress (as string, then convert to integer, then to binary)
+            String address = CleanAddress(instruction);
+
+            // convert to integer
+            int address_integer;
+            bool success = int.TryParse(address, out address_integer);
+            if (!success) Console.WriteLine("FAIL: convert address to integer.");
+
+            // convert address to binary
+            int place = 0;
+            int remainder = 0;
+            bool resolved = false;
+            String binary_address = "\0";
+            int address_to_convert = address_integer;
+            
+            // use divide by 2 technique [recursive: modulo to next significant bit, until zero]
+            while (!resolved)
+            {
+                Math.DivRem(address_to_convert, 2, out remainder);
+                address_to_convert = address_to_convert / 2;
+                binary_address = Prepend(binary_address, remainder.ToString());
+                place++;
+                if (address_to_convert == 0) resolved = true;
+            }
+
+            // pad any remaining bits with zeros
+            while (place < 15)
+            {
+                binary_address = Prepend(binary_address, "0");
+                place++;
+            }
+            return binary_address;
+        }
+
         // prepend string 'str' with string 'prefix' 
-        static string StringPrepender(string str, string prefix)
+        static string Prepend(string str, string prefix)
         {
             bool first = true;
-            using (StringWriter writer = new StringWriter())
-            using (StringReader reader = new StringReader(str))
+            using (StringWriter stream_out = new StringWriter())
+            using (StringReader stream_in = new StringReader(str))
             {
                 string line;
-                while ((line = reader.ReadLine()) != null)
+                while ((line = stream_in.ReadLine()) != null)
                 {
-                    if (!first)
-                        writer.WriteLine();
-                    writer.Write(prefix + line);
-                    first = false;
+                    if (!first) stream_out.WriteLine();
+                    // prepend prefix on first pass
+                    stream_out.Write(prefix + line); first = false;
                 }
-                return writer.ToString();
+                return stream_out.ToString();
             }
         }
 
         // strip @ from the front of address instructions
         static string CleanAddress(string strIn)
         {
-            // Replace invalid characters with empty strings.
+            // Replace @ character with empty strings.
             try
             {
                 return Regex.Replace(strIn, @"@", "", RegexOptions.None, TimeSpan.FromSeconds(1.5));
@@ -145,6 +181,16 @@ namespace Hacksemmbler
             {
                 return String.Empty;
             }
+        }
+
+        // parse C-instructions [comp, dest, jump]
+        static c_instruction ParseInstruction(string strIn)
+        {
+            c_instruction thisInstruction;
+            thisInstruction.comp = "";
+            thisInstruction.dest = "";
+            thisInstruction.jump = "";
+            return thisInstruction;
         }
     }
 }
