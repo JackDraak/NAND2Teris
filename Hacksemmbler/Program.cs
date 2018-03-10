@@ -56,7 +56,7 @@ namespace Hacksemmbler
                 offset++;
             }
 
-            // convert @ instructions to hack addresses
+            // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
             offset = 0;
             foreach (string instruction in File.ReadAllLines(args[argument]))
             {
@@ -67,32 +67,35 @@ namespace Hacksemmbler
                     //string[] address = new string[size];
                     String address;
 
-                    // extract @ addresses (as strings, then convert to integers, then to binary)
+                    // extract @ addresses (as strings, then convert to integer, then to binary)
                     if (test == '@')
                     {
+                        // extract address
                         address = CleanAddress(instruction);
-                        Console.WriteLine($"line({offset}) -- integer: {address} from string: {address}"); // debug
-  
-                    }
-                    //int thisAddress;
-                    //Int32.TryParse(address.ToString(), out thisAddress);
-                    //Console.WriteLine($"line({offset}) -- integer: {thisAddress} from string: {address}"); // debug
 
-                    //int fromBase = 10;
-                    //int toBase = 2;
-                    ///String result = Convert.ToString(Convert.ToInt16(address), toBase);
-                    ///Console.WriteLine($"line({offset}) -- integer: {result} from string: {address}"); // debug
-                    ///                
+                        // convert to integer
+                        int address_number;
+                        bool success = int.TryParse(address, out address_number);
+                        if (!success) Console.WriteLine("FAIL: convert address to integer.");
+                        
+                        // convert address to binary
+                        int result = 0;
+                        Math.DivRem(address_number, 2, out result); // get this into a loop
+
+                        Console.WriteLine($"{success} -- line({offset}) -- integer: {address_number} from string: {address}"); // debug
+                    }         
                 }
                 offset++;
             }
 
             Console.WriteLine($"lines: {lines} vs. offset: {offset}");
 
+            // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
             // Chill until user hits enter or return, then exit.
             Console.ReadLine();
         }
 
+        // strip @ from the front of address instructions
         static string CleanAddress(string strIn)
         {
             // Replace invalid characters with empty strings.
@@ -100,8 +103,7 @@ namespace Hacksemmbler
             {
                 return Regex.Replace(strIn, @"@", "", RegexOptions.None, TimeSpan.FromSeconds(1.5));
             }
-            // If we timeout when replacing invalid characters, 
-            // we should return Empty.
+            // If we timeout when replacing invalid characters, we return Empty.
             catch (RegexMatchTimeoutException)
             {
                 return String.Empty;
