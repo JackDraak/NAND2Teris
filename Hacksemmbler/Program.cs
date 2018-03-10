@@ -56,7 +56,7 @@ namespace Hacksemmbler
                 offset++;
             }
 
-            // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
+            // parse input file
             offset = 0;
             foreach (string instruction in File.ReadAllLines(args[argument]))
             {
@@ -64,25 +64,43 @@ namespace Hacksemmbler
                 if (size > 0)
                 {
                     char test = instruction[0];
-                    //string[] address = new string[size];
-                    String address;
 
-                    // extract @ addresses (as strings, then convert to integer, then to binary)
+                    // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
                     if (test == '@')
                     {
-                        // extract address
-                        address = CleanAddress(instruction);
+                        // extract @ddress (as string, then convert to integer, then to binary)
+                        String address = CleanAddress(instruction);
 
                         // convert to integer
-                        int address_number;
-                        bool success = int.TryParse(address, out address_number);
+                        int address_integer;
+                        bool success = int.TryParse(address, out address_integer);
                         if (!success) Console.WriteLine("FAIL: convert address to integer.");
-                        
-                        // convert address to binary
-                        int result = 0;
-                        Math.DivRem(address_number, 2, out result); // get this into a loop
 
-                        Console.WriteLine($"{success} -- line({offset}) -- integer: {address_number} from string: {address}"); // debug
+                        // convert address to binary
+                        int place = 0;
+                        int remainder = 0;
+                        bool resolved = false;
+                        String binary_address = "\0";
+                        int address_to_convert = address_integer;
+                        while (!resolved)
+                        {
+                            Math.DivRem(address_to_convert, 2, out remainder);
+                            address_to_convert = address_to_convert / 2;
+                            binary_address = StringPrepender(binary_address, remainder.ToString());
+                            place++;
+                            if (address_to_convert == 0) resolved = true;
+                        }
+                        while (place < 15)
+                        {
+                            binary_address = StringPrepender(binary_address, "0");
+                            place++;
+                        }
+
+                        Console.WriteLine($"{success} -- " +
+                                            $"line({offset}) -- " +
+                                            $"integer: {address_integer} " +
+                                            $"from string: {address} " +
+                                            $"as binary: {binary_address}"); // debug
                     }         
                 }
                 offset++;
@@ -93,6 +111,25 @@ namespace Hacksemmbler
             // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
             // Chill until user hits enter or return, then exit.
             Console.ReadLine();
+        }
+
+        // prepend string 'str' with string 'prefix' 
+        static string StringPrepender(string str, string prefix)
+        {
+            bool first = true;
+            using (StringWriter writer = new StringWriter())
+            using (StringReader reader = new StringReader(str))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (!first)
+                        writer.WriteLine();
+                    writer.Write(prefix + line);
+                    first = false;
+                }
+                return writer.ToString();
+            }
         }
 
         // strip @ from the front of address instructions
