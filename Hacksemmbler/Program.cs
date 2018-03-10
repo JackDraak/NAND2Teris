@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Hacksemmbler
@@ -22,37 +23,89 @@ namespace Hacksemmbler
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!"); // debug
-            for(int i = 0; i < args.Length; i++) // debug
+            // output for debug purposes, primarilly
+            for(int i = 0; i < args.Length; i++)
             {
-                Console.WriteLine("Arg {0} : {1}", i, args[i]);
+                Console.WriteLine($"Arg {i} : {args[i]}");
             }
 
-            int lines = 0;
-            foreach (string instruction in File.ReadAllLines(args[0]))
-            {
-                Console.WriteLine($"{lines}. Instruction: {instruction}"); // debug
+            // count which argument we're processing; allows for batch-processing
+            int argument = 0;
 
-                // CODE: if instruction is !comment or whitespace, increment lines counter
+            // initialize some variable we need for our nexr process
+            int inFile_length = 0;
+            int lines = 0; 
+
+            foreach (string instruction in File.ReadAllLines(args[argument]))
+            {
+                inFile_length++;
+                ///Console.WriteLine($"{lines}. Instruction: {instruction}"); // debug
+                // ADD CODE HERE: if instruction is !comment or whitespace, increment lines counter
                 lines++;
             }
 
-            // strip comment lines, build inputFIle_stripped
+            // // Strip comment lines, build inputFile_stripped array:
+            // initialize code buffer
             string[] inputFile_stripped = new string[lines];
             int offset = 0;
-            foreach (string instruction in File.ReadAllLines(args[0]))
+
+            foreach (string instruction in File.ReadAllLines(args[argument]))
             {
-                // if instruction is !comment or whitespace, add to program
-                inputFile_stripped[offset] = instruction;
+                // ADD CODE HERE: if instruction is !comment or whitespace, add to inputFile_stripped[]
+                inputFile_stripped[offset] = instruction; // for now, let's focus on a simple .asm input, however.
+                offset++;
+            }
+
+            // convert @ instructions to hack addresses
+            offset = 0;
+            foreach (string instruction in File.ReadAllLines(args[argument]))
+            {
+                int size = instruction.Length;
+                if (size > 0)
+                {
+                    char test = instruction[0];
+                    //string[] address = new string[size];
+                    String address;
+
+                    // extract @ addresses (as strings, then convert to integers, then to binary)
+                    if (test == '@')
+                    {
+                        address = CleanAddress(instruction);
+                        Console.WriteLine($"line({offset}) -- integer: {address} from string: {address}"); // debug
+  
+                    }
+                    //int thisAddress;
+                    //Int32.TryParse(address.ToString(), out thisAddress);
+                    //Console.WriteLine($"line({offset}) -- integer: {thisAddress} from string: {address}"); // debug
+
+                    //int fromBase = 10;
+                    //int toBase = 2;
+                    ///String result = Convert.ToString(Convert.ToInt16(address), toBase);
+                    ///Console.WriteLine($"line({offset}) -- integer: {result} from string: {address}"); // debug
+                    ///                
+                }
                 offset++;
             }
 
             Console.WriteLine($"lines: {lines} vs. offset: {offset}");
 
-
-
-
+            // Chill until user hits enter or return, then exit.
             Console.ReadLine();
+        }
+
+        static string CleanAddress(string strIn)
+        {
+            // Replace invalid characters with empty strings.
+            try
+            {
+                return Regex.Replace(strIn, @"@", "", RegexOptions.None, TimeSpan.FromSeconds(1.5));
+            }
+            // If we timeout when replacing invalid characters, 
+            // we should return Empty.
+            catch (RegexMatchTimeoutException)
+            {
+                return String.Empty;
+            }
         }
     }
 }
