@@ -1,9 +1,10 @@
-@19269
-@38713
-@52021
-@77654
-@92126
-@121473
+// multiply two positive integers (in R0 & R1, placing result in R2).
+	@19269	// testing 'bad address' decoding
+	@38713	// testing 'bad address' decoding
+	@52021	// testing 'bad address' decoding
+	@77654	// testing 'bad address' decoding
+	@92126	// testing 'bad address' decoding
+	@121473	// testing 'bad address' decoding
 @2
 M=0
 @0

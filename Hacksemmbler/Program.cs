@@ -59,7 +59,10 @@ namespace Hacksemmbler
                     String thisInstruction = StripComments(instruction);
                     if (!string.IsNullOrWhiteSpace(thisInstruction))
                     {
+                        thisInstruction = StripWhitespace(thisInstruction);
+                        // TODO: first-pass, build symbol table
                         instruction_list.Add(thisInstruction);
+                        Console.WriteLine($"{significant_lines}) instruction_list.Add({thisInstruction})");
                         significant_lines++; // get # of lines that have symbols or directives
                     }
                 }
@@ -221,9 +224,18 @@ namespace Hacksemmbler
             return thisInstruction;
         }
 
-        private static string StripComments(string strIn)
+        // strip whitespace
+        private static string StripWhitespace(string strIn)
+        { 
+            try { return Regex.Replace(strIn, @"\s", "", RegexOptions.None, TimeSpan.FromSeconds(1.5)); }
+            // If we timeout when replacing invalid characters, we return Empty.
+            catch (RegexMatchTimeoutException) { return String.Empty; }
+        }
+
+private static string StripComments(string strIn)
         {
-            int commentLocation = strIn.IndexOf("//");
+            int commentLocation = strIn.IndexOf("/");
+            if (commentLocation == 0) return "";
             if (commentLocation > 0) return strIn.Substring(0, commentLocation);
             return strIn;
         }
