@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
-using System.Text;
+using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+//using System.Text;
+//using System.Threading.Tasks;
 
 namespace Hacksemmbler
-/*  For project 6 of part I of From Nand to Tetris, the Hack Assembler: Hacksemmbler
+/*  For project 6 of part I of "From Nand to Tetris", my take on the Hack Assembler: Hacksemmbler
+ *  Be warned, my programming is not industrial-strength; I'm just doing this for fun and self-
+ *  development.
  *  
  *  design methodology: create program to generate Hack Machine Language from Hack Assembly Language
  *  First, process simple .asm lacking comments and symbols, then adapt for symbol integration.
@@ -31,21 +33,16 @@ namespace Hacksemmbler
             public string jumpT;
         };
 
-
         static void Main(string[] args)
         {
-            // debug output
-            //for(int i = 0; i < args.Length; i++) { Console.WriteLine($"Arg {i} : {args[i]}"); }
-
-            // count which argument [input file] we're processing; <<setting-up to allow for batch-processing>>
+            // count which argument [input file] we're processing;
             int argument = 0;
-
             while(argument < args.Length)
             {
                 // initialize some variables
                 int inFile_length = 0;
                 int significant_lines = 0; 
-
+                
                 // discover length of input filestream
                 foreach (string instruction in File.ReadAllLines(args[argument]))
                 {
@@ -88,10 +85,9 @@ namespace Hacksemmbler
                             // C-instruction format
                             //      in:     [dest=comp;jump]
                             //      out:    1-1-1-a  c-c-c-c  c-c-d-d  d-j-j-j
-                            cInst = ParseInstruction(instruction);
-                            Console.WriteLine($"{cInst.jumpB} {instruction}");
+                            cInst = ParseInstruction(instruction); // TODO: finish parser level 1 & level 2
+                            Console.WriteLine($"{cInst.jumpB} {instruction}"); // debug output
                             encoded_instruction = "111" + cInst.compB + cInst.destB + cInst.jumpB;
-                            ///encoded_instruction = EncodeCInstruction(compDestJump);
                         }
                         // stack lines in list for dumping as output filestream
                         outStream.Add(encoded_instruction);
@@ -99,43 +95,40 @@ namespace Hacksemmbler
                     stripped_offset++;
                 }
 
-                //debug: output what we have so far
+                // output encoded data
+                String fileOut = $"_{args[argument]}.hack";
+                File.Delete(fileOut);
+                // convert from list to string
+                string dataOut = "";
                 for (int i = 0; i < outStream.Count; i++)
                 {
-                    Console.WriteLine($"offset: {i}\t\tencoded: {outStream.ElementAt(i)}");
+                    dataOut = (dataOut + outStream.ElementAt(i) + "\r\n");
                 }
-
-                ///Console.WriteLine($"lines: {significant_lines} vs. offset: {stripped_offset}"); // debug output
+                System.IO.File.WriteAllText(fileOut, dataOut);
 
                 // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
-                // Chill until user hits enter or return, then exit.
+                // Chill until user hits enter or return, then exit (or continue batch).
                 Console.WriteLine($"...\n{args[argument]} parsed. Press <Enter> to continue/close window.");
-                Console.ReadLine();
                 argument++;
+                Console.ReadLine();
             }
         }
 
-        //
-        // // // // Internal methods // // // //
-        //
-
-        /* private static string EncodeCInstruction(c_instruction cInst)
-        {
-            String encoded_directive = "Code me.\0";
-            return encoded_directive;
-        } */
+        // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
+        // \\ // \\  Internal methods // \\ // \\ 
+        // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
 
         private static string Encode16BitAddress(int offset, string instruction)
         {
-            // extract @ddress (as string, then convert to integer, then to binary)
+            // extract @ddress as string...
             String address = CleanAddress(instruction);
 
-            // convert to integer
+            // convert string to integer...
             int address_integer;
             bool success = int.TryParse(address, out address_integer);
             if (!success) Console.WriteLine("FAIL: convert address to integer.");
 
-            // convert address to binary
+            // convert integer address to binary...
             int place = 0;
             int remainder = 0;
             bool resolved = false;
@@ -149,7 +142,7 @@ namespace Hacksemmbler
                 address_to_convert = address_to_convert / 2;
                 binary_address = Prepend(binary_address, remainder.ToString());
                 place++;
-                if (address_to_convert == 0) resolved = true;
+                if (address_to_convert == 0 | place == 16) resolved = true;
             }
 
             // pad any remaining bits with zeros
