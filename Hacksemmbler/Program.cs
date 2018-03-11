@@ -49,36 +49,27 @@ namespace Hacksemmbler
             int argument = 0;
             while(argument < args.Length)
             {
-                // initialize some variables
+                // begin parsing input datastream
                 int inFile_length = 0;
-                int significant_lines = 0; 
-                
-                // discover length of input filestream
+                int significant_lines = 0;
+                List<String> instruction_list = new List<String>();
                 foreach (string instruction in File.ReadAllLines(args[argument]))
                 {
                     inFile_length++;
-                    ///Console.WriteLine($"{lines}. Instruction: {instruction}"); // debug
-                    // <<ADD CODE HERE:>> if instruction is !comment or whitespace, increment significant_lines counter
-                    significant_lines++; // get # of lines that have symbols or directives
-                }
-                // initialize code buffer
-                string[] inputFile_stripped = new string[significant_lines];
-
-                // strip non-instruction lines, build inputFile_stripped array:
-                int filesize_offset = 0;
-                foreach (string instruction in File.ReadAllLines(args[argument]))
-                {
-                    // <<ADD CODE HERE:>> if instruction is !comment or whitespace, add to inputFile_stripped[]
-                    inputFile_stripped[filesize_offset] = instruction; // for now, let's focus on a simple .asm input, however.
-                    filesize_offset++;
+                    String thisInstruction = StripComments(instruction);
+                    if (!string.IsNullOrWhiteSpace(thisInstruction))
+                    {
+                        instruction_list.Add(thisInstruction);
+                        significant_lines++; // get # of lines that have symbols or directives
+                    }
                 }
 
-                // parse input file
+                // parse instructions
                 int stripped_offset = 0;
                 string encoded_instruction = "\0";
                 c_instruction cInst;
                 List<String> outStream = new List<String>();
-                foreach (string instruction in inputFile_stripped)
+                foreach (string instruction in instruction_list)
                 {
                     if (instruction.Length > 0)
                     {
@@ -150,7 +141,8 @@ namespace Hacksemmbler
                 address_to_convert = address_to_convert / 2;
                 binary_address = Prepend(binary_address, remainder.ToString());
                 place++;
-                // truncate out of range numbers (may produce unexpexcted results with bad address references)
+                // truncate out of range numbers (likely to produce unexpexcted results with bad address
+                // references, in any case, but this will prevent them masquerading as C-instructions.)
                 if (address_to_convert == 0 | place == 15) resolved = true; 
             }
 
@@ -200,10 +192,10 @@ namespace Hacksemmbler
         private static c_instruction ParseInstruction(string strIn)
         {
             c_instruction thisInstruction;
-            // intitialize binary component
-            thisInstruction.compB = "xxxxxxx";
-            thisInstruction.destB = "xxx";
-            thisInstruction.jumpB = "xxx";
+            // intitialize binary component(s)
+            thisInstruction.compB = "acccccc";
+            thisInstruction.destB = "ddd";
+            thisInstruction.jumpB = "jjj";
             // initialize symbolic component
             thisInstruction.compT = "";
             thisInstruction.destT = "";
@@ -211,12 +203,12 @@ namespace Hacksemmbler
 
             // isolate jump directive
             String[] jumpT = Regex.Split(strIn, ";");
-            if (jumpT.Length > 1)
+
+            for (int i = 0; i < jumpT.Length; i++)
             {
-                foreach (string str in jumpT)
-                {
-                    thisInstruction.jumpB = EncodeJump(str);
-                }
+                thisInstruction.jumpB = EncodeJump(jumpT[i]);
+                // debug output
+                Console.WriteLine($"({i}) symbol: {jumpT[i]} resolves to {thisInstruction.jumpB}");
             }
 
             // isolate dest and comp directives
@@ -227,6 +219,13 @@ namespace Hacksemmbler
             }
 
             return thisInstruction;
+        }
+
+        private static string StripComments(string strIn)
+        {
+            int commentLocation = strIn.IndexOf("//");
+            if (commentLocation > 0) return strIn.Substring(0, commentLocation);
+            return strIn;
         }
 
         private static string EncodeDest(string strIn)
@@ -248,7 +247,7 @@ namespace Hacksemmbler
                 case "DMA": return "111";
                 case "MDA": return "111";
                 case "MAD": return "111";
-                default: return "ddd";
+                default: return ">D<";
             }
         }
 
@@ -263,7 +262,7 @@ namespace Hacksemmbler
                 case "JNE": return "101";
                 case "JLE": return "110";
                 case "JMP": return "111";
-                default: return "ddd";
+                default: return ">J<";
             }
         }
     }
