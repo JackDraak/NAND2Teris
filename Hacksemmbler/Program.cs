@@ -9,16 +9,26 @@ using System.Text.RegularExpressions;
 namespace Hacksemmbler
 /*  For project 6 of part I of "From Nand to Tetris", my take on the Hack Assembler: Hacksemmbler
  *  Be warned, my programming is not industrial-strength; I'm just doing this for fun and self-
- *  development.
+ *  development. 
  *  
- *  design methodology: create program to generate Hack Machine Language from Hack Assembly Language
+ *  Primary specification reference: http://nand2tetris.org/course.php (topic: assembler)
+ *  
+ *  For better or worse, I decided to do this in Windows7 with the Visual Studio IDE using C#.
+ *  At first I was thinking C++, but then I felt C# would give me some handy shortcuts for handling
+ *  strings and lists and the like.  Because I'm developing this in Windows7 and using it in 
+ *  Windows7, that's where I would suggest you tinker with it. Better-yet, just do it your own
+ *  way, but if you really want to play with, or simply review my code: I'm on free (read: open)
+ *  GitHub so.... have at it!
+ *  
+ *  Design methodology: create program to generate Hack Machine Language from Hack Assembly Language
  *  First, process simple .asm lacking comments and symbols, then adapt for symbol integration.
  *  Order of operations: 
  *      - read and parse .asm input
  *      - generate instruction sequence free of comments/whitespace
  *      - record labels in symbol table
  *      - allocate pointers and record in symbol table
- *      - convert instructions to machine code, using symbol table as needed
+ *      - convert C-instructions and @_instructions to machine code
+ *          - using symbol table as needed
  * */
 {
     class Program
@@ -35,7 +45,7 @@ namespace Hacksemmbler
 
         static void Main(string[] args)
         {
-            // count which argument [input file] we're processing;
+            // track which argument [input file] we're processing (allows for batch-processing);
             int argument = 0;
             while(argument < args.Length)
             {
@@ -76,8 +86,7 @@ namespace Hacksemmbler
                         // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
                         if (test == '@')
                         {
-                            encoded_instruction = Encode16BitAddress(stripped_offset, instruction);
-                            ///Console.WriteLine($"stripped line number: {stripped_offset} @ddress as 16-bit binary: {encoded_instruction}"); // debug output             
+                            encoded_instruction = Encode16BitAddress(stripped_offset, instruction);            
                         }
                         // parse C-instructions <<and later, handle symbols and pointers.... here, or prior to here>>
                         else
@@ -134,7 +143,6 @@ namespace Hacksemmbler
             bool resolved = false;
             String binary_address = "\0";
             int address_to_convert = address_integer;
-            
             // use divide by 2 technique [recursive: modulo to next significant bit, until zero]
             while (!resolved)
             {
@@ -142,7 +150,8 @@ namespace Hacksemmbler
                 address_to_convert = address_to_convert / 2;
                 binary_address = Prepend(binary_address, remainder.ToString());
                 place++;
-                if (address_to_convert == 0 | place == 16) resolved = true;
+                // truncate out of range numbers (may produce unexpexcted results with bad address references)
+                if (address_to_convert == 0 | place == 15) resolved = true; 
             }
 
             // pad any remaining bits with zeros
@@ -155,7 +164,7 @@ namespace Hacksemmbler
         }
 
         // prepend string 'str' with string 'prefix' 
-        static string Prepend(string strIn, string prefix)
+        private static string Prepend(string strIn, string prefix)
         {
             bool first = true;
             using (StringWriter stream_out = new StringWriter())
@@ -173,7 +182,7 @@ namespace Hacksemmbler
         }
 
         // strip @ from the front of address instructions
-        static string CleanAddress(string strIn)
+        private static string CleanAddress(string strIn)
         {
             // Replace @ character with empty strings.
             try
@@ -188,30 +197,62 @@ namespace Hacksemmbler
         }
 
         // parse C-instructions [comp, dest, jump]
-        static c_instruction ParseInstruction(string strIn)
+        private static c_instruction ParseInstruction(string strIn)
         {
             c_instruction thisInstruction;
             // intitialize binary component
-            thisInstruction.compB = "0000000";
-            thisInstruction.destB = "000";
-            thisInstruction.jumpB = "000";
+            thisInstruction.compB = "xxxxxxx";
+            thisInstruction.destB = "xxx";
+            thisInstruction.jumpB = "xxx";
             // initialize symbolic component
             thisInstruction.compT = "";
             thisInstruction.destT = "";
             thisInstruction.jumpT = "";
+
             // isolate jump directive
             String[] jumpT = Regex.Split(strIn, ";");
             if (jumpT.Length > 1)
             {
-                foreach(string str in jumpT)
+                foreach (string str in jumpT)
                 {
                     thisInstruction.jumpB = EncodeJump(str);
                 }
             }
+
+            // isolate dest and comp directives
+            String[] destT = Regex.Split(strIn, "=");
+            foreach (string str in destT)
+            {
+                thisInstruction.destB = EncodeDest(str);
+            }
+
             return thisInstruction;
         }
 
-        static string EncodeJump(string strIn)
+        private static string EncodeDest(string strIn)
+        {
+            switch (strIn)
+            {
+                case "M": return "001";
+                case "D": return "010";
+                case "MD": return "011";
+                case "DM": return "011";
+                case "A": return "100";
+                case "AM": return "101";
+                case "AD": return "110";
+                case "MA": return "101";
+                case "DA": return "110";
+                case "AMD": return "111";
+                case "ADM": return "111";
+                case "DAM": return "111";
+                case "DMA": return "111";
+                case "MDA": return "111";
+                case "MAD": return "111";
+                default: return "ddd";
+            }
+        }
+
+            private static string EncodeJump(string strIn)
         {
             switch(strIn)
             {
@@ -222,7 +263,7 @@ namespace Hacksemmbler
                 case "JNE": return "101";
                 case "JLE": return "110";
                 case "JMP": return "111";
-                default: return "000";
+                default: return "ddd";
             }
         }
     }
