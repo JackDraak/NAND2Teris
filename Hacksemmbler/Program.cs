@@ -33,7 +33,7 @@ namespace Hacksemmbler
 {
     class Program
     {
-        struct c_instruction
+        struct C_instruction
         {
             public string compB;
             public string destB;
@@ -41,6 +41,12 @@ namespace Hacksemmbler
             public string compT;
             public string destT;
             public string jumpT;
+        };
+
+        struct SymbolEntry
+        {
+            public string tag;
+            public int address;
         };
 
         static void Main(string[] args)
@@ -53,24 +59,46 @@ namespace Hacksemmbler
                 int inFile_length = 0;
                 int significant_lines = 0;
                 List<String> instruction_list = new List<String>();
-                foreach (string instruction in File.ReadAllLines(args[argument]))
+                List<SymbolEntry> symbol_list = new List<SymbolEntry>();
+                foreach (string input_line in File.ReadAllLines(args[argument]))
                 {
                     inFile_length++;
-                    String thisInstruction = StripComments(instruction);
+                    String thisInstruction = StripComments(input_line);
                     if (!string.IsNullOrWhiteSpace(thisInstruction))
                     {
                         thisInstruction = StripWhitespace(thisInstruction);
-                        // TODO: first-pass, build symbol table
                         instruction_list.Add(thisInstruction);
-                        Console.WriteLine($"{significant_lines}) instruction_list.Add({thisInstruction})");
+                        ///Console.WriteLine($"{significant_lines}) instruction_list.Add({thisInstruction})"); // debug output
                         significant_lines++; // get # of lines that have symbols or directives
                     }
+                    // TODO: first-pass, build symbol table
+                    int symbol_offset = 0;
+                    foreach (string instruction in instruction_list)
+                    {
+                        symbol_offset++;
+                        if (LineIsSymbol(instruction))
+                        {
+                            SymbolEntry thisSymbol;
+                            thisSymbol.tag = FindSymbol(instruction);
+                            thisSymbol.address = symbol_offset;
+                            if (!symbol_list.Contains(thisSymbol))
+                            {
+                                symbol_list.Add(thisSymbol);
+                            }
+                            symbol_offset--;
+                        }
+                    }
+                }
+                // debug output: symbol table
+                foreach (SymbolEntry entry in symbol_list)
+                {
+                    Console.WriteLine($"Symbol: {entry.tag} at address: {entry.address}");
                 }
 
                 // parse instructions
                 int stripped_offset = 0;
-                string encoded_instruction = "\0";
-                c_instruction cInst;
+                string encoded_directive = "\0";
+                C_instruction cInst;
                 List<String> outStream = new List<String>();
                 foreach (string instruction in instruction_list)
                 {
@@ -80,7 +108,7 @@ namespace Hacksemmbler
                         // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
                         if (test == '@')
                         {
-                            encoded_instruction = Encode16BitAddress(stripped_offset, instruction);            
+                            encoded_directive = Encode16BitAddress(instruction);            
                         }
                         // parse C-instructions <<and later, handle symbols and pointers.... here, or prior to here>>
                         else
@@ -90,10 +118,10 @@ namespace Hacksemmbler
                             //      out:    1-1-1-a  c-c-c-c  c-c-d-d  d-j-j-j
                             cInst = ParseInstruction(instruction); // TODO: finish parser level 1 & level 2
                             Console.WriteLine($"{cInst.jumpB} {instruction}"); // debug output
-                            encoded_instruction = "111" + cInst.compB + cInst.destB + cInst.jumpB;
+                            encoded_directive = "111" + cInst.compB + cInst.destB + cInst.jumpB;
                         }
                         // stack lines in list for dumping as output filestream
-                        outStream.Add(encoded_instruction);
+                        outStream.Add(encoded_directive);
                     }
                     stripped_offset++;
                 }
@@ -121,17 +149,14 @@ namespace Hacksemmbler
         // \\ // \\  Internal methods // \\ // \\ 
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
 
-        private static string Encode16BitAddress(int offset, string instruction)
+        // convert decmial address to binary address
+        private static string Encode16BitAddress(string instruction)
         {
-            // extract @ddress as string...
             String address = CleanAddress(instruction);
-
-            // convert string to integer...
+            Console.WriteLine($"address: {address}\t{instruction}"); // debug output
             int address_integer;
             bool success = int.TryParse(address, out address_integer);
             if (!success) Console.WriteLine("FAIL: convert address to integer.");
-
-            // convert integer address to binary...
             int place = 0;
             int remainder = 0;
             bool resolved = false;
@@ -169,7 +194,6 @@ namespace Hacksemmbler
                 while ((line = stream_in.ReadLine()) != null)
                 {
                     if (!first) stream_out.WriteLine();
-                    // prepend prefix on first pass
                     stream_out.Write(prefix + line); first = false;
                 }
                 return stream_out.ToString();
@@ -179,7 +203,7 @@ namespace Hacksemmbler
         // strip @ from the front of address instructions
         private static string CleanAddress(string strIn)
         {
-            // Replace @ character with empty strings.
+            // Remove @ character
             try
             {
                 return Regex.Replace(strIn, @"@", "", RegexOptions.None, TimeSpan.FromSeconds(1.5));
@@ -192,9 +216,9 @@ namespace Hacksemmbler
         }
 
         // parse C-instructions [comp, dest, jump]
-        private static c_instruction ParseInstruction(string strIn)
+        private static C_instruction ParseInstruction(string strIn)
         {
-            c_instruction thisInstruction;
+            C_instruction thisInstruction;
             // intitialize binary component(s)
             thisInstruction.compB = "acccccc";
             thisInstruction.destB = "ddd";
@@ -232,7 +256,25 @@ namespace Hacksemmbler
             catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
-private static string StripComments(string strIn)
+        private static bool LineIsSymbol(string strIn)
+        {
+            return strIn.StartsWith("(") && strIn.EndsWith(")");
+        }
+
+        private static string FindSymbol(string strIn)
+        {
+            return strIn.Substring(1, strIn.Length -2);
+        }
+
+        private static string TagSymbols(string strIn)
+        {
+            int symbol_id = strIn.IndexOf("/");
+            if (symbol_id == 0) return "";
+            if (symbol_id > 0) return strIn.Substring(0, symbol_id);
+            return strIn;
+        }
+
+        private static string StripComments(string strIn)
         {
             int commentLocation = strIn.IndexOf("/");
             if (commentLocation == 0) return "";
