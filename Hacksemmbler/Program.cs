@@ -56,11 +56,6 @@ namespace Hacksemmbler
                 List<String> instruction_list = new List<String>();
                 List<SymbolEntry> symbol_list = new List<SymbolEntry>();
                 symbol_list = PredefineSymbols(symbol_list);
-                // debug pds
-                foreach (SymbolEntry se in symbol_list)
-                {
-                    Console.WriteLine($"Symbol: {se.tag}\t{se.address}");
-                }
                 foreach (string input_line in File.ReadAllLines(args[argument]))
                 {
                     inFile_length++;
@@ -77,10 +72,10 @@ namespace Hacksemmbler
                     foreach (string instruction in instruction_list)
                     {
                         symbol_offset++;
-                        if (LineIsSymbol(instruction))
+                        if (LineIsSymbolReference(instruction))
                         {
                             SymbolEntry thisSymbol;
-                            thisSymbol.tag = FindSymbol(instruction);
+                            thisSymbol.tag = GetSymbol(instruction);
                             thisSymbol.address = symbol_offset;
                             if (!symbol_list.Contains(thisSymbol))
                             {
@@ -109,7 +104,18 @@ namespace Hacksemmbler
                         // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
                         if (test == '@')
                         {
-                            encoded_directive = Encode16BitAddress(instruction);            
+                            String address = CleanAddress(instruction);
+                            Console.WriteLine($"address: {address}\t{instruction}"); // debug output
+
+                            int address_integer;
+                            bool success = int.TryParse(address, out address_integer);
+                            if (!success)
+                            {
+                               // symbol_list.Contains(SymbolEntry = );
+                            }
+
+                            // TODO: convert labels to addresses
+                            encoded_directive = Encode16BitAddress(address);            
                         }
                         // parse C-instructions <<and later, handle symbols and pointers.... here, or prior to here>>
                         else
@@ -130,6 +136,7 @@ namespace Hacksemmbler
                 // output encoded data
                 String fileOut = $"_{args[argument]}.hack";
                 File.Delete(fileOut);
+
                 // convert from list to string
                 string dataOut = "";
                 for (int i = 0; i < outStream.Count; i++)
@@ -146,28 +153,26 @@ namespace Hacksemmbler
             }
         }
 
+        #region Internal Methods
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
         // \\ // \\  Internal methods // \\ // \\ 
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
 
         // convert decmial address to binary address
-        private static string Encode16BitAddress(string instruction)
+        private static string Encode16BitAddress(string address)
         {
-            String address = CleanAddress(instruction);
-            Console.WriteLine($"address: {address}\t{instruction}"); // debug output
             int address_integer;
             bool success = int.TryParse(address, out address_integer);
             if (!success)
             {
                 Console.WriteLine("FAIL: convert address to integer.");
-               // if ()
             }
             int place = 0;
             int remainder = 0;
             bool resolved = false;
             String binary_address = "\0";
             int address_to_convert = address_integer;
-            // use divide by 2 technique [recursive: modulo to next significant bit, until zero]
+            // employing "divide by 2" technique [recursive: modulo to next significant bit, until zero]
             while (!resolved)
             {
                 Math.DivRem(address_to_convert, 2, out remainder);
@@ -209,18 +214,12 @@ namespace Hacksemmbler
         private static string CleanAddress(string strIn)
         {
             // Remove @ character
-            try
-            {
-                return Regex.Replace(strIn, @"@", "", RegexOptions.None, TimeSpan.FromSeconds(1.5));
-            }
+            try { return Regex.Replace(strIn, @"@", "", RegexOptions.None, TimeSpan.FromSeconds(0.5)); }
             // If we timeout when replacing invalid characters, we return Empty.
-            catch (RegexMatchTimeoutException)
-            {
-                return String.Empty;
-            }
+            catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
-        // parse C-instructions [comp, dest, jump]
+        // parse C-instructions [dest=comp;jump]
         private static C_instruction ParseInstruction(string strIn)
         {
             C_instruction thisInstruction;
@@ -249,36 +248,39 @@ namespace Hacksemmbler
             {
                 thisInstruction.destB = EncodeDest(str);
             }
-
             return thisInstruction;
         }
 
         // strip whitespace
         private static string StripWhitespace(string strIn)
         { 
-            try { return Regex.Replace(strIn, @"\s", "", RegexOptions.None, TimeSpan.FromSeconds(1.5)); }
+            try { return Regex.Replace(strIn, @"\s", "", RegexOptions.None, TimeSpan.FromSeconds(0.5)); }
             // If we timeout when replacing invalid characters, we return Empty.
             catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
-        private static bool LineIsSymbol(string strIn)
+        // identify symbolic label directives
+        private static bool LineIsSymbolReference(string strIn)
         {
             return strIn.StartsWith("(") && strIn.EndsWith(")");
         }
 
-        private static string FindSymbol(string strIn)
+        // isolate symbolic directive label
+        private static string GetSymbol(string strIn)
         {
             return strIn.Substring(1, strIn.Length -2);
         }
 
+        // copy of StripComments... depreciated?
         private static string TagSymbols(string strIn)
         {
-            int symbol_id = strIn.IndexOf("/");
+            int symbol_id = strIn.IndexOf("/"); // NB? wth?
             if (symbol_id == 0) return "";
             if (symbol_id > 0) return strIn.Substring(0, symbol_id);
             return strIn;
         }
 
+        // strip comments out of instructions
         private static string StripComments(string strIn)
         {
             int commentLocation = strIn.IndexOf("/");
@@ -286,7 +288,14 @@ namespace Hacksemmbler
             if (commentLocation > 0) return strIn.Substring(0, commentLocation);
             return strIn;
         }
+        #endregion
 
+        #region Encoding Tables
+        // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
+        // \\ // \\  Encoding tables  // \\ // \\ 
+        // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
+
+        // Dest encoding table
         private static string EncodeDest(string strIn)
         {
             switch (strIn)
@@ -306,11 +315,12 @@ namespace Hacksemmbler
                 case "DMA": return "111";
                 case "MDA": return "111";
                 case "MAD": return "111";
-                default: return ">D<";
+                default: return "-D-";
             }
         }
 
-            private static string EncodeJump(string strIn)
+        // Jump encoding table
+        private static string EncodeJump(string strIn)
         {
             switch(strIn)
             {
@@ -321,7 +331,7 @@ namespace Hacksemmbler
                 case "JNE": return "101";
                 case "JLE": return "110";
                 case "JMP": return "111";
-                default: return ">J<";
+                default: return "-J-";
             }
         }
 
@@ -354,5 +364,6 @@ namespace Hacksemmbler
             sym.tag = "R15"; sym.address = 15; symTable.Add(sym);
             return symTable;
         }
+        #endregion
     }
 }
