@@ -35,18 +35,13 @@ namespace Hacksemmbler
     {
         struct C_instruction
         {
-            public string compB;
-            public string destB;
-            public string jumpB;
-            public string compT;
-            public string destT;
-            public string jumpT;
+            public string compB; public string destB; public string jumpB;
+            public string compT; public string destT; public string jumpT;
         };
 
         struct SymbolEntry
         {
-            public string tag;
-            public int address;
+            public string tag; public int address;
         };
 
         static void Main(string[] args)
@@ -60,6 +55,12 @@ namespace Hacksemmbler
                 int significant_lines = 0;
                 List<String> instruction_list = new List<String>();
                 List<SymbolEntry> symbol_list = new List<SymbolEntry>();
+                symbol_list = PredefineSymbols(symbol_list);
+                // debug pds
+                foreach (SymbolEntry se in symbol_list)
+                {
+                    Console.WriteLine($"Symbol: {se.tag}\t{se.address}");
+                }
                 foreach (string input_line in File.ReadAllLines(args[argument]))
                 {
                     inFile_length++;
@@ -156,7 +157,11 @@ namespace Hacksemmbler
             Console.WriteLine($"address: {address}\t{instruction}"); // debug output
             int address_integer;
             bool success = int.TryParse(address, out address_integer);
-            if (!success) Console.WriteLine("FAIL: convert address to integer.");
+            if (!success)
+            {
+                Console.WriteLine("FAIL: convert address to integer.");
+               // if ()
+            }
             int place = 0;
             int remainder = 0;
             bool resolved = false;
@@ -318,6 +323,36 @@ namespace Hacksemmbler
                 case "JMP": return "111";
                 default: return ">J<";
             }
+        }
+
+        // Populate symbol table with predefined values
+        private static List<SymbolEntry> PredefineSymbols(List<SymbolEntry> symTable)
+        {
+            SymbolEntry sym;
+            sym.tag = "SP"; sym.address = 0; symTable.Add(sym);
+            sym.tag = "LCL"; sym.address = 1; symTable.Add(sym);
+            sym.tag = "ARG"; sym.address = 2; symTable.Add(sym);
+            sym.tag = "THIS"; sym.address = 3; symTable.Add(sym);
+            sym.tag = "THAT"; sym.address = 4; symTable.Add(sym);
+            sym.tag = "SCREEN"; sym.address = 16384; symTable.Add(sym);
+            sym.tag = "KBD"; sym.address = 24576; symTable.Add(sym);
+            sym.tag = "R0"; sym.address = 0; symTable.Add(sym);
+            sym.tag = "R1"; sym.address = 1; symTable.Add(sym);
+            sym.tag = "R2"; sym.address = 2; symTable.Add(sym);
+            sym.tag = "R3"; sym.address = 3; symTable.Add(sym);
+            sym.tag = "R4"; sym.address = 4; symTable.Add(sym);
+            sym.tag = "R5"; sym.address = 5; symTable.Add(sym);
+            sym.tag = "R6"; sym.address = 6; symTable.Add(sym);
+            sym.tag = "R7"; sym.address = 7; symTable.Add(sym);
+            sym.tag = "R8"; sym.address = 8; symTable.Add(sym);
+            sym.tag = "R9"; sym.address = 9; symTable.Add(sym);
+            sym.tag = "R10"; sym.address = 10; symTable.Add(sym);
+            sym.tag = "R11"; sym.address = 11; symTable.Add(sym);
+            sym.tag = "R12"; sym.address = 12; symTable.Add(sym);
+            sym.tag = "R13"; sym.address = 13; symTable.Add(sym);
+            sym.tag = "R14"; sym.address = 14; symTable.Add(sym);
+            sym.tag = "R15"; sym.address = 15; symTable.Add(sym);
+            return symTable;
         }
     }
 }
