@@ -86,7 +86,7 @@ namespace Hacksemmbler
                 String inName = GetName(inFile);
                 String fileOut = $"{inName}.hack";
                 File.Delete(fileOut);
-                File.WriteAllText(fileOut, ListAsString(outStream), System.Text.Encoding.Default);
+                File.WriteAllText(fileOut, ListAsString(outStream), System.Text.Encoding.ASCII);
 
                 // output debug stream
                 String debugOut = $"_{inName}.debug";
