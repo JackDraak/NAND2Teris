@@ -276,6 +276,14 @@ namespace Hacksemmbler
             catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
+        // strip equal-sign
+        private static string StripEq(string strIn)
+        {
+            try { return Regex.Replace(strIn, @"=", "", RegexOptions.None, TimeSpan.FromSeconds(0.5)); }
+            // If we timeout when replacing invalid characters, we return Empty.
+            catch (RegexMatchTimeoutException) { return String.Empty; }
+        }
+
         // identify symbolic label references
         private static bool LineIsSymbolReference(string strIn)
         {
@@ -287,10 +295,10 @@ namespace Hacksemmbler
         {
             int l = strIn.Length;
             int delimiter = strIn.IndexOf("=");
-            if (delimiter == 0) return "";
-            if (delimiter == l) return strIn.Substring(delimiter, delimiter);
-            if (delimiter > 0) return strIn.Substring(delimiter, strIn.Length -delimiter);
-            return strIn;
+            //if (delimiter == 0) return "";
+            if (delimiter == l) return StripEq(strIn.Substring(delimiter, l - delimiter));
+            if (delimiter > 0) return StripEq(strIn.Substring(delimiter, l - delimiter));
+            return StripEq(strIn);
         }
 
         // isolate destination directive
@@ -382,20 +390,26 @@ namespace Hacksemmbler
                 case "D-1": return "0001110";
                 case "A-1": return "0110010";
                 case "D+A": return "0000010";
+                case "A+D": return "0000010";
                 case "D-A": return "0010011";
                 case "A-D": return "0000111";
                 case "D&A": return "0000000";
                 case "D|A": return "0010101";
+                case "A&D": return "0000000";
+                case "A|D": return "0010101";
                 case "M": return "1110000";
                 case "!M": return "1110001";
                 case "-M": return "1110011";
                 case "M+1": return "1110111";
                 case "M-1": return "1110010";
                 case "D+M": return "1000010";
+                case "M+D": return "1000010";
                 case "D-M": return "1010011";
                 case "M-D": return "1000111";
                 case "D&M": return "1000000";
                 case "D|M": return "1010101";
+                case "M&D": return "1000000";
+                case "M|D": return "1010101";
                 default: return "0000000";
             }
         }
