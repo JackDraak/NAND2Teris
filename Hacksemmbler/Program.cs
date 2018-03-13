@@ -45,31 +45,25 @@ namespace Hacksemmbler
             while(argument < args.Length)
             {
                 // begin parsing input datastream
-                int inFile_length = 0;
-                int significant_lines = 0;
-                int next_open_register = 16;
-                List<String> instruction_list = new List<String>();
-                Dictionary<String, int> symbolTable = new Dictionary<String, int>();
-                symbolTable = PredefineSymbols(symbolTable);
+                int next_open_register;
+                List<string> instruction_list;
+                Dictionary<string, int> symbolTable;
+                InitEncode(out next_open_register, out instruction_list, out symbolTable);
                 foreach (string input_line in File.ReadAllLines(args[argument]))
                 {
-                    inFile_length++;
                     String thisInstruction = StripComments(input_line);
                     if (!string.IsNullOrWhiteSpace(thisInstruction))
                     {
                         thisInstruction = StripWhitespace(thisInstruction);
                         instruction_list.Add(thisInstruction);
-                        ///Console.WriteLine($"{significant_lines}) instruction_list.Add({thisInstruction})"); // debug output
-                        significant_lines++; // get # of lines that have symbols or directives
                     }
-                    // TODO: first-pass, build symbol table
+                    // first-pass, build symbol table
                     int symbol_offset = 0;
-                    //foreach (string instruction in instruction_list)
                     for (int i = 0; i < instruction_list.Count; i++)
                     {
                         if (LineIsSymbolReference(instruction_list[i]))
                         {
-                            Console.WriteLine($"{instruction_list[i]} evaluates as TRUE: LineIsSymbolReference");
+                            ///Console.WriteLine($"{instruction_list[i]} evaluates as TRUE: LineIsSymbolReference"); // debug output
                             if (!symbolTable.ContainsKey(instruction_list[i]))
                             {
                                 symbolTable.Add(instruction_list[i], symbol_offset);
@@ -80,11 +74,14 @@ namespace Hacksemmbler
                         symbol_offset++;
                     }
                 }
+
+                /*
                 // debug output: symbol table
                 for (int i = 0; i < symbolTable.Count; i++)
                 {
                     Console.WriteLine($"Symbol: {symbolTable.Keys.ElementAt(i)} at address: {symbolTable.Values.ElementAt(i)}");
                 }
+                */
 
                 // parse instructions
                 int stripped_offset = 0;
@@ -95,14 +92,11 @@ namespace Hacksemmbler
                 {
                     if (instruction.Length > 0)
                     {
-                        bool label = false;
                         char test = instruction[0];
                         // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
                         if (test == '@')
                         {
                             String address = CleanAddress(instruction);
-                            ///Console.WriteLine($"address: {address}\t{instruction}"); // debug output
-
                             int address_integer;
                             bool success = int.TryParse(address, out address_integer);
                             if (!success)
@@ -120,7 +114,7 @@ namespace Hacksemmbler
                                     next_open_register++;
                                 }
                             }
-                            encoded_directive = Encode16BitAddress(address);            
+                            encoded_directive = Encode16BitAddress(address);
                         }
                         // parse C-instructions
                         else
@@ -128,16 +122,11 @@ namespace Hacksemmbler
                             // C-instruction format
                             //      in:     [dest=comp;jump]
                             //      out:    1-1-1-a  c-c-c-c  c-c-d-d  d-j-j-j
-                            cInst = ParseInstruction(instruction); // TODO: finish parser level 1 & level 2
-                            ///Console.WriteLine($"{cInst.jumpB} {instruction}"); // debug output
+                            cInst = ParseInstruction(instruction); 
                             encoded_directive = "111" + cInst.compB + cInst.destB + cInst.jumpB;
                         }
                         // stack lines in list for dumping as output filestream
-                        if (!label)
-                        {
-                            outStream.Add(encoded_directive);
-                            label = false;
-                        }
+                        outStream.Add(encoded_directive);
                     }
                     stripped_offset++;
                 }
@@ -147,16 +136,7 @@ namespace Hacksemmbler
                 File.Delete(fileOut);
 
                 // convert from list to string
-                //string dataOut = "";
-                //File.OpenWrite(fileOut);
-                //for (int i = 0; i < outStream.Count; i++)
-                //{
-                    //dataOut = (dataOut + outStream.ElementAt(i)  + "\r\n"); // NB illegal character? \r\n
-                    //File.AppendAllText(fileOut, outStream.ElementAt(i) + "\r\n", System.Text.Encoding.Default);
-                    // File.WriteAllText(fileOut, outStream.ElementAt(i) + "\r\n", System.Text.Encoding.Default);
-                    File.WriteAllText(fileOut, ThisOutput(outStream), System.Text.Encoding.Default);
-                //}
-                //File.WriteAllText(fileOut, dataOut, System.Text.Encoding.Default);
+                File.WriteAllText(fileOut, ThisOutput(outStream), System.Text.Encoding.Default);
 
                 // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
                 // Chill until user hits enter or return, then exit (or continue batch).
@@ -164,6 +144,15 @@ namespace Hacksemmbler
                 argument++;
                 Console.ReadLine();
             }
+        }
+
+        // for batch processing, re-init before each input file
+        private static void InitEncode(out int next_open_register, out List<string> instruction_list, out Dictionary<string, int> symbolTable)
+        {
+            next_open_register = 16;
+            instruction_list = new List<String>();
+            symbolTable = new Dictionary<String, int>();
+            symbolTable = PredefineSymbols(symbolTable);
         }
 
         #region Internal Methods
@@ -258,7 +247,6 @@ namespace Hacksemmbler
             thisInstruction.destB = "ddd";
             thisInstruction.jumpB = "000";
 
-            // ;(...)
             String[] splitstruction = Regex.Split(strIn, @";(...)");
             String jump ="";
             if (splitstruction.Length >= 2)
@@ -272,7 +260,7 @@ namespace Hacksemmbler
             String comp = GetComp(destComp);
             thisInstruction.destB = EncodeDest(dest);
             thisInstruction.compB = EncodeComp(comp);
-            Console.WriteLine($"Instruction: {strIn}\t{dest}\t{comp}\t{jump}\t{thisInstruction.compB}{thisInstruction.destB}{thisInstruction.jumpB}"); // debug output
+            Console.WriteLine($"Instruction: {strIn}\t{dest}\t{comp}\t{jump}\t111{thisInstruction.compB}{thisInstruction.destB}{thisInstruction.jumpB}"); // debug output
 
             return thisInstruction;
         }
@@ -291,7 +279,7 @@ namespace Hacksemmbler
             return strIn.StartsWith("(") && strIn.EndsWith(")");
         }
 
-        // isolate computation
+        // isolate computation directive
         private static string GetComp(string strIn)
         {
             int l = strIn.Length;
@@ -302,7 +290,7 @@ namespace Hacksemmbler
             return strIn;
         }
 
-        // isolate destination
+        // isolate destination directive
         private static string GetDest(string strIn)
         {
             int eq = strIn.IndexOf("=");
@@ -326,7 +314,7 @@ namespace Hacksemmbler
             return strIn;
         }
 
-        // strip jump segment out of instructions
+        // isolate jump directive
         private static string StripJump(string strIn)
         {
             int commentLocation = strIn.IndexOf(";");
