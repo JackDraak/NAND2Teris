@@ -40,6 +40,12 @@ namespace Hacksemmbler
 
         static void Main(string[] args)
         {
+            // simple sanity check, nothing too fancy
+            if (args.Length == 0)
+            {
+                Console.WriteLine("USAGE: Hacksemmbler fileOne.asm [fileTwo.asm ... fileEn.asm]");
+            }
+
             // track which argument [input file] we're processing (this allows for batch-processing);
             int argument = 0;
             while(argument < args.Length)
