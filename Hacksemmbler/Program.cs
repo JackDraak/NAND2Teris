@@ -140,11 +140,10 @@ namespace Hacksemmbler
                 String inName = GetName(inFile);
                 String fileOut = $"{inName}.hack";
                 File.Delete(fileOut);
-
-                // convert from list to string
                 File.WriteAllText(fileOut, ThisOutput(outStream), System.Text.Encoding.Default);
 
                 String debugOut = $"_{inName}.debug";
+                File.Delete(debugOut);
                 File.WriteAllText(debugOut, ThisOutput(outDebug), System.Text.Encoding.Unicode);
 
                 // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
@@ -271,7 +270,7 @@ namespace Hacksemmbler
             thisInstruction.destB = EncodeDest(dest);
             thisInstruction.compB = EncodeComp(comp);
             Console.WriteLine($"Instruction: {strIn}\t{dest}\t{comp}\t{jump}\t111{thisInstruction.compB}{thisInstruction.destB}{thisInstruction.jumpB}"); // debug output
-
+            
             return thisInstruction;
         }
 
