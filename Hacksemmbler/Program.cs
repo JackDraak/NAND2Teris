@@ -40,11 +40,11 @@ namespace Hacksemmbler
 
         static void Main(string[] args)
         {
-            // simple sanity checks, nothing too fancy
-            if (args.Length == 0 || args[0] == "?" || args[0] == "help" || !LooksLikeValidAsm(args[0]))
+            // Simple sanity checks, nothing too fancy... We could pass all args through LooksLikeValidAsm. We could also make LLVA() more robust.
+            if (args.Length == 0 || args[0] == "?" || args[0] == "help" || !LooksLikeValidAsm(args[0])) 
             {
                 PrintUsage();
-                return;
+                return; // No this doesn't 'return' from the IF, it will exit Main gracefully.
             }
 
             // track which argument [input file] we're processing (this allows for batch-processing);
@@ -229,7 +229,7 @@ namespace Hacksemmbler
         private static string GetDest(string strIn)
         {
             int delimiter = strIn.IndexOf("=");
-            if (delimiter == 0) return "";
+            if (delimiter <= 0) return ""; // NB
             if (delimiter > 0) return strIn.Substring(0, delimiter);
             return strIn;
         }
