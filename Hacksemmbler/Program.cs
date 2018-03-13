@@ -66,7 +66,7 @@ namespace Hacksemmbler
                 {
                     if (LineIsSymbolReference(instructionList[i]))
                     {
-                        debugLog.Add($"{instructionList[i]} evaluates as TRUE: LineIsSymbolReference");
+                        debugLog.Add($"{instructionList[i]}: LineIsSymbolReference");
                         if (!symbolTable.ContainsKey(instructionList[i]))
                         {
                             symbolTable.Add(instructionList[i], symbolOffset);
