@@ -48,6 +48,7 @@ namespace Hacksemmbler
                 // begin parsing input datastream
                 int inFile_length = 0;
                 int significant_lines = 0;
+                int next_open_register = 16;
                 List<String> instruction_list = new List<String>();
                 Dictionary<String, int> symbolTable = new Dictionary<String, int>();
                 symbolTable = PredefineSymbols(symbolTable);
@@ -64,17 +65,20 @@ namespace Hacksemmbler
                     }
                     // TODO: first-pass, build symbol table
                     int symbol_offset = 0;
-                    foreach (string instruction in instruction_list)
+                    //foreach (string instruction in instruction_list)
+                    for (int i = 0; i < instruction_list.Count; i++)
                     {
-                        symbol_offset++;
-                        if (LineIsSymbolReference(instruction))
+                        if (LineIsSymbolReference(instruction_list[i]))
                         {
-                            if (!symbolTable.ContainsKey(instruction))
+                            Console.WriteLine($"{instruction_list[i]} evaluates as TRUE: LineIsSymbolReference");
+                            if (!symbolTable.ContainsKey(instruction_list[i]))
                             {
-                                symbolTable.Add(instruction, symbol_offset);
+                                symbolTable.Add(instruction_list[i], symbol_offset);
+                                symbol_offset--;
+                                instruction_list.RemoveAt(i);
                             }
-                            symbol_offset--;
                         }
+                        symbol_offset++;
                     }
                 }
                 // debug output: symbol table
@@ -92,21 +96,31 @@ namespace Hacksemmbler
                 {
                     if (instruction.Length > 0)
                     {
+                        bool label = false;
                         char test = instruction[0];
                         // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
                         if (test == '@')
                         {
                             String address = CleanAddress(instruction);
-                            Console.WriteLine($"address: {address}\t{instruction}"); // debug output
+                            //Console.WriteLine($"address: {address}\t{instruction}"); // debug output
 
                             int address_integer;
                             bool success = int.TryParse(address, out address_integer);
                             if (!success)
                             {
-                               // symbol_list.Contains(SymbolEntry = );
+                                if (symbolTable.TryGetValue(address, out int value))
+                                {
+                                    Console.WriteLine($"convert label address: {address}\tto the value: {value}"); // debug output
+                                    address = value.ToString();
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"adding new label to table: {address}\t{next_open_register}"); // debug output
+                                    symbolTable.Add(address, next_open_register);
+                                    address = next_open_register.ToString();
+                                    next_open_register++;
+                                }
                             }
-
-                            // TODO: convert labels to addresses
                             encoded_directive = Encode16BitAddress(address);            
                         }
                         // parse C-instructions
@@ -120,7 +134,11 @@ namespace Hacksemmbler
                             encoded_directive = "111" + cInst.compB + cInst.destB + cInst.jumpB;
                         }
                         // stack lines in list for dumping as output filestream
-                        outStream.Add(encoded_directive);
+                        if (!label)
+                        {
+                            outStream.Add(encoded_directive);
+                            label = false;
+                        }
                     }
                     stripped_offset++;
                 }
@@ -261,15 +279,6 @@ namespace Hacksemmbler
         private static string GetSymbol(string strIn)
         {
             return strIn.Substring(1, strIn.Length -2);
-        }
-
-        // copy of StripComments... depreciated?
-        private static string TagSymbols(string strIn)
-        {
-            int symbol_id = strIn.IndexOf("/"); // NB? wth?
-            if (symbol_id == 0) return "";
-            if (symbol_id > 0) return strIn.Substring(0, symbol_id);
-            return strIn;
         }
 
         // strip comments out of instructions
