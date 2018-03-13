@@ -75,9 +75,8 @@ namespace Hacksemmbler
                     if (instruction.Length > 0)
                     {
                         char test = instruction[0];
-                        // convert @-instructions to hack machine language addresses
+                        // convert @-instructions and C-instructions to hack machine language encoding
                         encodedDirective = EncodeDirective(debugLog, ref nextOpenRegister, symbolTable, instruction, test);
-                        // stack lines in list for dumping as output filestream
                         outStream.Add(encodedDirective);
                     }
                 }
@@ -96,8 +95,8 @@ namespace Hacksemmbler
 
                 // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
                 // Chill until user hits enter or return, then exit (or continue batch).
-                Console.WriteLine($"...\nprogram: '{inName}' parsed.");
-                if (argument + 1 < args.Length) Console.WriteLine($"Press <Enter> to process {args[argument + 1]}");
+                Console.WriteLine($"...\nprogram: '{inName}' parsed and encoded.");
+                if (argument + 1 < args.Length) Console.WriteLine($"Press <Enter> to encode {args[argument + 1]}");
                 else Console.WriteLine("Press <Enter> to exit");
                 argument++; Console.ReadLine();
             }
