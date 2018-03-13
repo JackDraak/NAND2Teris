@@ -152,12 +152,13 @@ namespace Hacksemmbler
             bool success = int.TryParse(address, out addressAsInteger);
             if (!success)
             {
+                // this should never happen; addresses need to be converted from labels to numbers before attempting to encode
                 Console.WriteLine("FAIL: convert address to integer error: Encode16BitAddress");
             }
             int place = 0;
             int remainder = 0;
             bool resolved = false;
-            String binaryAddress = " "; // NB - use "" here and we don't get addresses in our output.... use "\0" and get bad output....
+            String binaryAddress = " "; // NB - return StripWhitespace(binaryAddress);
             int addressToConvert = addressAsInteger;
             // employing "divide by 2" technique [recursive: modulo to next significant bit, until zero]
             while (!resolved)
@@ -229,7 +230,7 @@ namespace Hacksemmbler
         private static string GetDest(string strIn)
         {
             int delimiter = strIn.IndexOf("=");
-            if (delimiter <= 0) return ""; // NB
+            if (delimiter <= 0) return ""; // NB - if there is assignment (no = sign) return empty string
             if (delimiter > 0) return strIn.Substring(0, delimiter);
             return strIn;
         }
@@ -267,6 +268,12 @@ namespace Hacksemmbler
             symbolTable = PredefineSymbols(symbolTable);
         }
 
+        // identify symbolic label references
+        private static bool LineIsSymbolReference(string strIn)
+        {
+            return strIn.StartsWith("(") && strIn.EndsWith(")");
+        }
+
         // convert List of words into a string for output to a file
         private static string ListAsString(List<String> listIn)
         {
@@ -282,12 +289,6 @@ namespace Hacksemmbler
                 }
                 return streamOut.ToString();
             }
-        }
-
-        // identify symbolic label references
-        private static bool LineIsSymbolReference(string strIn)
-        {
-            return strIn.StartsWith("(") && strIn.EndsWith(")");
         }
 
         private static bool LooksLikeValidAsm(string strIn)
