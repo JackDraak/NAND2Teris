@@ -44,7 +44,7 @@ namespace Hacksemmbler
             if (args.Length == 0 || args[0] == "?" || args[0] == "help")
             {
                 PrintUsage();
-                return;
+                ///return;
             }
 
             // track which argument [input file] we're processing (this allows for batch-processing);
@@ -68,7 +68,7 @@ namespace Hacksemmbler
                 DebugSymbols(debugLog, symbolTable);
 
                 // parse instructions
-                string encodedDirective = "\0";
+                string encodedDirective = "";
                 List<String> outStream = new List<String>();
                 foreach (string instruction in instructionList)
                 {
@@ -157,7 +157,7 @@ namespace Hacksemmbler
             int place = 0;
             int remainder = 0;
             bool resolved = false;
-            String binaryAddress = "\0";
+            String binaryAddress = " "; // NB - use "" here and we don't get addresses in our output.... use "\0" and get bad output....
             int addressToConvert = addressAsInteger;
             // employing "divide by 2" technique [recursive: modulo to next significant bit, until zero]
             while (!resolved)
@@ -177,7 +177,7 @@ namespace Hacksemmbler
                 binaryAddress = Prepend(binaryAddress, "0");
                 place++;
             }
-            return binaryAddress;
+            return StripWhitespace(binaryAddress);
         }
 
         // encode @-instructions and C-instructions
@@ -400,15 +400,15 @@ namespace Hacksemmbler
         {
             switch (strIn)
             {
-                case "0": return "0101010";
-                case "1": return "0111111";
-                case "-1": return "0111010";
-                case "D": return "0001100";
-                case "A": return "0110000";
-                case "!D": return "0001101";
-                case "!A": return "0110001";
-                case "-D": return "0001111";
-                case "-A": return "0110011";
+                case "0":   return "0101010";
+                case "1":   return "0111111";
+                case "-1":  return "0111010";
+                case "D":   return "0001100";
+                case "A":   return "0110000";
+                case "!D":  return "0001101";
+                case "!A":  return "0110001";
+                case "-D":  return "0001111";
+                case "-A":  return "0110011";
                 case "D+1": return "0011111";
                 case "A+1": return "0110111";
                 case "D-1": return "0001110";
@@ -421,9 +421,9 @@ namespace Hacksemmbler
                 case "D|A": return "0010101";
                 case "A&D": return "0000000";
                 case "A|D": return "0010101";
-                case "M": return "1110000";
-                case "!M": return "1110001";
-                case "-M": return "1110011";
+                case "M":   return "1110000";
+                case "!M":  return "1110001";
+                case "-M":  return "1110011";
                 case "M+1": return "1110111";
                 case "M-1": return "1110010";
                 case "D+M": return "1000010";
@@ -434,7 +434,7 @@ namespace Hacksemmbler
                 case "D|M": return "1010101";
                 case "M&D": return "1000000";
                 case "M|D": return "1010101";
-                default: return "0000000";
+                default:    return "0000000";
             }
         }
 
@@ -443,22 +443,22 @@ namespace Hacksemmbler
         {
             switch (strIn)
             {
-                case "M": return "001";
-                case "D": return "010";
-                case "MD": return "011";
-                case "DM": return "011";
-                case "A": return "100";
-                case "AM": return "101";
-                case "AD": return "110";
-                case "MA": return "101";
-                case "DA": return "110";
+                case "M":   return "001";
+                case "D":   return "010";
+                case "MD":  return "011";
+                case "DM":  return "011";
+                case "A":   return "100";
+                case "AM":  return "101";
+                case "AD":  return "110";
+                case "MA":  return "101";
+                case "DA":  return "110";
                 case "AMD": return "111";
                 case "ADM": return "111";
                 case "DAM": return "111";
                 case "DMA": return "111";
                 case "MDA": return "111";
                 case "MAD": return "111";
-                default: return "000";
+                default:    return "000";
             }
         }
 
@@ -474,36 +474,36 @@ namespace Hacksemmbler
                 case "JNE": return "101";
                 case "JLE": return "110";
                 case "JMP": return "111";
-                default: return "000";
+                default:    return "000";
             }
         }
 
         // Populate symbol table with predefined values
         private static Dictionary<String, int> PredefineSymbols(Dictionary<String, int> symTable)
         {
-            symTable.Add("SP", 0);
-            symTable.Add("LCL", 1);
-            symTable.Add("ARG", 2);
-            symTable.Add("THIS", 3);
-            symTable.Add("THAT", 4);
-            symTable.Add("SCREEN", 16384);
-            symTable.Add("KBD", 24576);
-            symTable.Add("R0", 0);
-            symTable.Add("R1", 1);
-            symTable.Add("R2", 2);
-            symTable.Add("R3", 3);
-            symTable.Add("R4", 4);
-            symTable.Add("R5", 5);
-            symTable.Add("R6", 6);
-            symTable.Add("R7", 7);
-            symTable.Add("R8", 8);
-            symTable.Add("R9", 9);
-            symTable.Add("R10", 10);
-            symTable.Add("R11", 11);
-            symTable.Add("R12", 12);
-            symTable.Add("R13", 13);
-            symTable.Add("R14", 14);
-            symTable.Add("R15", 15);
+            symTable.Add("SP",      0);
+            symTable.Add("LCL",     1);
+            symTable.Add("ARG",     2);
+            symTable.Add("THIS",    3);
+            symTable.Add("THAT",    4);
+            symTable.Add("SCREEN",  16384);
+            symTable.Add("KBD",     24576);
+            symTable.Add("R0",      0);
+            symTable.Add("R1",      1);
+            symTable.Add("R2",      2);
+            symTable.Add("R3",      3);
+            symTable.Add("R4",      4);
+            symTable.Add("R5",      5);
+            symTable.Add("R6",      6);
+            symTable.Add("R7",      7);
+            symTable.Add("R8",      8);
+            symTable.Add("R9",      9);
+            symTable.Add("R10",     10);
+            symTable.Add("R11",     11);
+            symTable.Add("R12",     12);
+            symTable.Add("R13",     13);
+            symTable.Add("R14",     14);
+            symTable.Add("R15",     15);
             return symTable;
         }
         #endregion
