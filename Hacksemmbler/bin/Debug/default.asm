@@ -6,6 +6,7 @@
 // Multiplies R0 and R1 and stores the result in R2, when R0 and R1 are positive.
 // (R0, R1, R2 refer to RAM[0], RAM[1], and RAM[2], respectively.)
 
+	AM=M-1	// debug test 
 // Sanity checks
 	@2		// @R2 is Sum register
 	M=0		// set Sum to zero

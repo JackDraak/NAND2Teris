@@ -36,7 +36,6 @@ namespace Hacksemmbler
         struct C_instruction
         {
             public string compB; public string destB; public string jumpB;
-            public string compT; public string destT; public string jumpT;
         };
 
         static void Main(string[] args)
@@ -102,7 +101,7 @@ namespace Hacksemmbler
                         if (test == '@')
                         {
                             String address = CleanAddress(instruction);
-                            //Console.WriteLine($"address: {address}\t{instruction}"); // debug output
+                            ///Console.WriteLine($"address: {address}\t{instruction}"); // debug output
 
                             int address_integer;
                             bool success = int.TryParse(address, out address_integer);
@@ -110,12 +109,12 @@ namespace Hacksemmbler
                             {
                                 if (symbolTable.TryGetValue(address, out int value))
                                 {
-                                    Console.WriteLine($"convert label address: {address}\tto the value: {value}"); // debug output
+                                    ///Console.WriteLine($"convert label address: {address}\tto the value: {value}"); // debug output
                                     address = value.ToString();
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"adding new label to table: {address}\t{next_open_register}"); // debug output
+                                    ///Console.WriteLine($"adding new label to table: {address}\t{next_open_register}"); // debug output
                                     symbolTable.Add(address, next_open_register);
                                     address = next_open_register.ToString();
                                     next_open_register++;
@@ -130,7 +129,7 @@ namespace Hacksemmbler
                             //      in:     [dest=comp;jump]
                             //      out:    1-1-1-a  c-c-c-c  c-c-d-d  d-j-j-j
                             cInst = ParseInstruction(instruction); // TODO: finish parser level 1 & level 2
-                            Console.WriteLine($"{cInst.jumpB} {instruction}"); // debug output
+                            ///Console.WriteLine($"{cInst.jumpB} {instruction}"); // debug output
                             encoded_directive = "111" + cInst.compB + cInst.destB + cInst.jumpB;
                         }
                         // stack lines in list for dumping as output filestream
@@ -236,28 +235,24 @@ namespace Hacksemmbler
             // intitialize binary component(s)
             thisInstruction.compB = "acccccc";
             thisInstruction.destB = "ddd";
-            thisInstruction.jumpB = "jjj";
-            // initialize symbolic component
-            thisInstruction.compT = "";
-            thisInstruction.destT = "";
-            thisInstruction.jumpT = "";
+            thisInstruction.jumpB = "000";
 
-            // isolate jump directive
-            String[] jumpT = Regex.Split(strIn, ";");
-
-            for (int i = 0; i < jumpT.Length; i++)
+            // ;(...)
+            String[] splitstruction = Regex.Split(strIn, @";(...)");
+            String jump ="";
+            if (splitstruction.Length >= 2)
             {
-                thisInstruction.jumpB = EncodeJump(jumpT[i]);
-                // debug output
-                Console.WriteLine($"({i}) symbol: {jumpT[i]} resolves to {thisInstruction.jumpB}");
+                jump = splitstruction[1];
+                thisInstruction.jumpB = EncodeJump(jump);
             }
 
-            // isolate dest and comp directives
-            String[] destT = Regex.Split(strIn, "=");
-            foreach (string str in destT)
-            {
-                thisInstruction.destB = EncodeDest(str);
-            }
+            String destComp = StripJump(strIn);
+            String dest = GetDest(destComp);
+            String comp = GetComp(destComp);
+            thisInstruction.destB = EncodeDest(dest);
+            thisInstruction.compB = EncodeComp(comp);
+            Console.WriteLine($"Instruction: {strIn}\t{dest}\t{comp}\t{jump}\t{thisInstruction.compB}{thisInstruction.destB}{thisInstruction.jumpB}"); // debug output
+
             return thisInstruction;
         }
 
@@ -275,6 +270,26 @@ namespace Hacksemmbler
             return strIn.StartsWith("(") && strIn.EndsWith(")");
         }
 
+        // isolate computation
+        private static string GetComp(string strIn)
+        {
+            int l = strIn.Length;
+            int eq = strIn.IndexOf("=");
+            if (eq == 0) return "";
+            if (eq == l) return strIn.Substring(eq, eq);
+            if (eq > 0) return strIn.Substring(eq, strIn.Length -eq);
+            return strIn;
+        }
+
+        // isolate destination
+        private static string GetDest(string strIn)
+        {
+            int eq = strIn.IndexOf("=");
+            if (eq == 0) return "";
+            if (eq > 0) return strIn.Substring(0, eq);
+            return strIn;
+        }
+
         // isolate symbolic directive label
         private static string GetSymbol(string strIn)
         {
@@ -286,6 +301,15 @@ namespace Hacksemmbler
         {
             int commentLocation = strIn.IndexOf("/");
             if (commentLocation == 0) return "";
+            if (commentLocation > 0) return strIn.Substring(0, commentLocation);
+            return strIn;
+        }
+
+        // strip jump segment out of instructions
+        private static string StripJump(string strIn)
+        {
+            int commentLocation = strIn.IndexOf(";");
+            if (commentLocation == 0) return strIn;
             if (commentLocation > 0) return strIn.Substring(0, commentLocation);
             return strIn;
         }
@@ -316,7 +340,44 @@ namespace Hacksemmbler
                 case "DMA": return "111";
                 case "MDA": return "111";
                 case "MAD": return "111";
-                default: return "-D-";
+                default: return "000";
+            }
+        }
+
+        // Comp encoding table
+        private static string EncodeComp(string strIn)
+        {
+            switch (strIn)
+            {
+                case "0": return "0101010";
+                case "1": return "0111111";
+                case "-1": return "0111010";
+                case "D": return "0001100";
+                case "A": return "0110000";
+                case "!D": return "0001101";
+                case "!A": return "0110001";
+                case "-D": return "0001111";
+                case "-A": return "0110011";
+                case "D+1": return "0011111";
+                case "A+1": return "0110111";
+                case "D-1": return "0001110";
+                case "A-1": return "0110010";
+                case "D+A": return "0000010";
+                case "D-A": return "0010011";
+                case "A-D": return "0000111";
+                case "D&A": return "0000000";
+                case "D|A": return "0010101";
+                case "M": return "1110000";
+                case "!M": return "1110001";
+                case "-M": return "1110011";
+                case "M+1": return "1110111";
+                case "M-1": return "1110010";
+                case "D+M": return "1000010";
+                case "D-M": return "1010011";
+                case "M-D": return "1000111";
+                case "D&M": return "1000000";
+                case "D|M": return "1010101";
+                default: return "0000000";
             }
         }
 
@@ -332,7 +393,7 @@ namespace Hacksemmbler
                 case "JNE": return "101";
                 case "JLE": return "110";
                 case "JMP": return "111";
-                default: return "-J-";
+                default: return "000";
             }
         }
 
