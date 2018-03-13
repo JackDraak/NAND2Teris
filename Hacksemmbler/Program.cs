@@ -33,64 +33,60 @@ namespace Hacksemmbler
 {
     class Program
     {
-        struct C_instruction
+        struct C_code
         {
-            public string compB; public string destB; public string jumpB;
+            public string cmp, dst, jmp;
         };
 
         static void Main(string[] args)
         {
-            // track which argument [input file] we're processing (allows for batch-processing);
+            // track which argument [input file] we're processing (this allows for batch-processing);
             int argument = 0;
             while(argument < args.Length)
             {
-                // pre-parse input datastream
-                int next_open_register;
-                List<string> instruction_list;
-                List<string> outDebug; 
+                // pre-parse input datastream into a handy-dandy List
+                List<string> instructionList;
+                List<string> debugLog;
+                int nextOpenRegister;
                 Dictionary<string, int> symbolTable;
-                InitEncode(out next_open_register, out instruction_list, out symbolTable, out outDebug);
-                foreach (string input_line in File.ReadAllLines(args[argument]))
+                InitEncode(out nextOpenRegister, out instructionList, out symbolTable, out debugLog);
+                foreach (string inputLine in File.ReadAllLines(args[argument]))
                 {
-                    String thisInstruction = StripComments(input_line);
-                    if (!string.IsNullOrWhiteSpace(thisInstruction))
+                    String thisLine = StripComments(inputLine);
+                    if (!string.IsNullOrWhiteSpace(thisLine))
                     {
-                        thisInstruction = StripWhitespace(thisInstruction);
-                        instruction_list.Add(thisInstruction);
+                        thisLine = StripWhitespace(thisLine);
+                        instructionList.Add(thisLine);
                     }
                 }
 
                 // first-pass, build symbol table
-                int symbol_offset = 0;
-                for (int i = 0; i < instruction_list.Count; i++)
+                int symbolOffset = 0;
+                for (int i = 0; i < instructionList.Count; i++)
                 {
-                    if (LineIsSymbolReference(instruction_list[i]))
+                    if (LineIsSymbolReference(instructionList[i]))
                     {
-                        ///Console.WriteLine($"{instruction_list[i]} evaluates as TRUE: LineIsSymbolReference"); // debug output
-                        outDebug.Add($"{instruction_list[i]} evaluates as TRUE: LineIsSymbolReference");
-                        if (!symbolTable.ContainsKey(instruction_list[i]))
+                        debugLog.Add($"{instructionList[i]} evaluates as TRUE: LineIsSymbolReference");
+                        if (!symbolTable.ContainsKey(instructionList[i]))
                         {
-                            symbolTable.Add(instruction_list[i], symbol_offset);
-                            symbol_offset--;
-                            instruction_list.RemoveAt(i);
+                            symbolTable.Add(instructionList[i], symbolOffset);
+                            symbolOffset--;
+                            instructionList.RemoveAt(i);
                         }
                     }
-                    symbol_offset++;
+                    symbolOffset++;
                 }
 
                 // debug output: symbol table
                 for (int i = 0; i < symbolTable.Count; i++)
                 {
-                    ///Console.WriteLine($"Symbol: {symbolTable.Keys.ElementAt(i)} at address: {symbolTable.Values.ElementAt(i)}");
-                    outDebug.Add($"Symbol: {symbolTable.Keys.ElementAt(i)} at address: {symbolTable.Values.ElementAt(i)}");
+                    debugLog.Add($"Symbol: {symbolTable.Keys.ElementAt(i)} at address: {symbolTable.Values.ElementAt(i)}");
                 }
 
                 // parse instructions
-                int stripped_offset = 0;
-                string encoded_directive = "\0";
-                C_instruction cInst;
+                string encodedDirective = "\0";
                 List<String> outStream = new List<String>();
-                foreach (string instruction in instruction_list)
+                foreach (string instruction in instructionList)
                 {
                     if (instruction.Length > 0)
                     {
@@ -99,40 +95,32 @@ namespace Hacksemmbler
                         if (test == '@')
                         {
                             String address = CleanAddress(instruction);
-                            int address_integer;
-                            bool success = int.TryParse(address, out address_integer);
+                            int addressAsInteger;
+                            bool success = int.TryParse(address, out addressAsInteger);
                             if (!success)
                             {
                                 if (symbolTable.TryGetValue(address, out int value))
                                 {
-                                    ///Console.WriteLine($"convert label address: {address}\tto the value: {value}"); // debug output
-                                    outDebug.Add($"convert label address: {address}\tto the value: {value}");
+                                    debugLog.Add($"convert label address: {address}\tto the value: {value}");
                                     address = value.ToString();
                                 }
                                 else
                                 {
-                                    ///Console.WriteLine($"adding new label to table: {address}\t{next_open_register}"); // debug output
-                                    outDebug.Add($"adding new label to table: {address}\t{next_open_register}");
-                                    symbolTable.Add(address, next_open_register);
-                                    address = next_open_register.ToString();
-                                    next_open_register++;
+                                    debugLog.Add($"adding new label to table: {address}\t{nextOpenRegister}");
+                                    symbolTable.Add(address, nextOpenRegister);
+                                    address = nextOpenRegister.ToString();
+                                    nextOpenRegister++;
                                 }
                             }
-                            encoded_directive = Encode16BitAddress(address);
+                            encodedDirective = Encode16BitAddress(address);
                         }
-                        // parse C-instructions
                         else
                         {
-                            // C-instruction format
-                            //      in:     [dest=comp;jump]
-                            //      out:    1-1-1-a  c-c-c-c  c-c-d-d  d-j-j-j
-                            cInst = ParseInstruction(instruction); 
-                            encoded_directive = "111" + cInst.compB + cInst.destB + cInst.jumpB;
+                            encodedDirective = ParseCInstruction(debugLog, instruction);
                         }
                         // stack lines in list for dumping as output filestream
-                        outStream.Add(encoded_directive);
+                        outStream.Add(encodedDirective);
                     }
-                    stripped_offset++;
                 }
 
                 // output encoded data
@@ -142,23 +130,52 @@ namespace Hacksemmbler
                 File.Delete(fileOut);
                 File.WriteAllText(fileOut, ThisOutput(outStream), System.Text.Encoding.Default);
 
+                // output debug stream
                 String debugOut = $"_{inName}.debug";
                 File.Delete(debugOut);
-                File.WriteAllText(debugOut, ThisOutput(outDebug), System.Text.Encoding.Unicode);
+                File.WriteAllText(debugOut, ThisOutput(debugLog), System.Text.Encoding.Unicode);
 
                 // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
                 // Chill until user hits enter or return, then exit (or continue batch).
-                Console.WriteLine($"...\n{args[argument]} parsed. Press <Enter> to continue/close window.");
-                argument++;
-                Console.ReadLine();
+                Console.WriteLine($"...\nprogram: '{inName}' parsed."); // Press <Enter> to continue/close window.");
+                if (argument + 1 < args.Length) Console.WriteLine($"Press <Enter> to process {args[argument + 1]}");
+                else Console.WriteLine("Press <Enter> to exit");
+                argument++; Console.ReadLine();
             }
         }
 
-        // for batch processing, re-init before each input file
-        private static void InitEncode(out int next_open_register, out List<string> instruction_list, out Dictionary<string, int> symbolTable, out List<string> outDebug)
+        private static string ParseCInstruction(List<string> debugLog, string instruction)
         {
-            next_open_register = 16;
-            instruction_list = new List<String>();
+            string encodedDirective;
+            C_code cInst;
+            // intitialize binary component(s)
+            cInst.cmp = "acccccc";
+            cInst.dst = "ddd";
+            cInst.jmp = "000";
+
+            String[] splitstruction = Regex.Split(instruction, @";(...)");
+            String jump = "";
+            if (splitstruction.Length >= 2)
+            {
+                jump = splitstruction[1];
+                cInst.jmp = EncodeJump(jump);
+            }
+            String destComp = StripJump(instruction);
+            String dest = GetDest(destComp);
+            String comp = GetComp(destComp);
+            cInst.dst = EncodeDest(dest);
+            cInst.cmp = EncodeComp(comp);
+            debugLog.Add($"Instruction: {instruction}\t{dest}\t{comp}\t{jump}\t111{cInst.cmp}{cInst.dst}{cInst.jmp}");
+            encodedDirective = "111" + cInst.cmp + cInst.dst + cInst.jmp;
+            return encodedDirective;
+        }
+
+        // for batch processing, re-init before each input file
+        private static void InitEncode(out int nextOpenRegister, out List<string> instructionList, 
+                                       out Dictionary<string, int> symbolTable, out List<string> outDebug)
+        {
+            nextOpenRegister = 16;
+            instructionList = new List<String>();
             outDebug = new List<String>();
             symbolTable = new Dictionary<String, int>();
             symbolTable = PredefineSymbols(symbolTable);
@@ -170,71 +187,71 @@ namespace Hacksemmbler
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
 
         // convert List of words into a string for output to a file
-        private static string ThisOutput(List<String> list)
+        private static string ThisOutput(List<String> listIn)
         {
-            using (StringWriter stream_out = new StringWriter())
+            using (StringWriter streamOut = new StringWriter())
             {
                 string line;
                 int i = 0;
-                while (i < list.Count)
+                while (i < listIn.Count)
                 {
-                    line = list[i];
-                    stream_out.Write(line + "\r\n");
+                    line = listIn[i];
+                    streamOut.Write(line + "\r\n");
                     i++;
                 }
-                return stream_out.ToString();
+                return streamOut.ToString();
             }
         }
 
         // convert decmial address to binary address
         private static string Encode16BitAddress(string address)
         {
-            int address_integer;
-            bool success = int.TryParse(address, out address_integer);
+            int addressAsInteger;
+            bool success = int.TryParse(address, out addressAsInteger);
             if (!success)
             {
-                Console.WriteLine("FAIL: convert address to integer.");
+                Console.WriteLine("FAIL: convert address to integer error: Encode16BitAddress");
             }
             int place = 0;
             int remainder = 0;
             bool resolved = false;
-            String binary_address = "\0";
-            int address_to_convert = address_integer;
+            String binaryAddress = "\0";
+            int addressToConvert = addressAsInteger;
             // employing "divide by 2" technique [recursive: modulo to next significant bit, until zero]
             while (!resolved)
             {
-                Math.DivRem(address_to_convert, 2, out remainder);
-                address_to_convert = address_to_convert / 2;
-                binary_address = Prepend(binary_address, remainder.ToString());
+                Math.DivRem(addressToConvert, 2, out remainder);
+                addressToConvert = addressToConvert / 2;
+                binaryAddress = Prepend(binaryAddress, remainder.ToString());
                 place++;
                 // truncate out of range numbers (likely to produce unexpexcted results with bad address
                 // references, in any case, but this will prevent them masquerading as C-instructions.)
-                if (address_to_convert == 0 | place == 15) resolved = true; 
+                if (addressToConvert == 0 | place == 15) resolved = true; 
             }
 
             // pad any remaining bits with zeros
             while (place < 16)
             {
-                binary_address = Prepend(binary_address, "0");
+                binaryAddress = Prepend(binaryAddress, "0");
                 place++;
             }
-            return binary_address;
+            return binaryAddress;
         }
 
         // prepend string 'str' with string 'prefix' 
         private static string Prepend(string strIn, string prefix)
         {
             bool first = true;
-            using (StringWriter stream_out = new StringWriter())
-            using (StringReader stream_in = new StringReader(strIn))
+            using (StringWriter streamOut = new StringWriter())
+            using (StringReader streamIn = new StringReader(strIn))
             {
                 string line;
-                while ((line = stream_in.ReadLine()) != null)
+                while ((line = streamIn.ReadLine()) != null)
                 {
-                    if (!first) stream_out.WriteLine();
-                    stream_out.Write(prefix + line); first = false;
+                    if (!first) streamOut.WriteLine();
+                    streamOut.Write(prefix + line); first = false;
                 }
-                return stream_out.ToString();
+                return streamOut.ToString();
             }
         }
 
@@ -247,33 +264,6 @@ namespace Hacksemmbler
             catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
-        // parse C-instructions [dest=comp;jump]
-        private static C_instruction ParseInstruction(string strIn)
-        {
-            C_instruction thisInstruction;
-            // intitialize binary component(s)
-            thisInstruction.compB = "acccccc";
-            thisInstruction.destB = "ddd";
-            thisInstruction.jumpB = "000";
-
-            String[] splitstruction = Regex.Split(strIn, @";(...)");
-            String jump ="";
-            if (splitstruction.Length >= 2)
-            {
-                jump = splitstruction[1];
-                thisInstruction.jumpB = EncodeJump(jump);
-            }
-
-            String destComp = StripJump(strIn);
-            String dest = GetDest(destComp);
-            String comp = GetComp(destComp);
-            thisInstruction.destB = EncodeDest(dest);
-            thisInstruction.compB = EncodeComp(comp);
-            Console.WriteLine($"Instruction: {strIn}\t{dest}\t{comp}\t{jump}\t111{thisInstruction.compB}{thisInstruction.destB}{thisInstruction.jumpB}"); // debug output
-            
-            return thisInstruction;
-        }
-
         // strip whitespace
         private static string StripWhitespace(string strIn)
         { 
@@ -282,7 +272,7 @@ namespace Hacksemmbler
             catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
-        // identify symbolic label directives
+        // identify symbolic label references
         private static bool LineIsSymbolReference(string strIn)
         {
             return strIn.StartsWith("(") && strIn.EndsWith(")");
@@ -292,50 +282,50 @@ namespace Hacksemmbler
         private static string GetComp(string strIn)
         {
             int l = strIn.Length;
-            int eq = strIn.IndexOf("=");
-            if (eq == 0) return "";
-            if (eq == l) return strIn.Substring(eq, eq);
-            if (eq > 0) return strIn.Substring(eq, strIn.Length -eq);
+            int delimiter = strIn.IndexOf("=");
+            if (delimiter == 0) return "";
+            if (delimiter == l) return strIn.Substring(delimiter, delimiter);
+            if (delimiter > 0) return strIn.Substring(delimiter, strIn.Length -delimiter);
             return strIn;
         }
 
         // isolate destination directive
         private static string GetDest(string strIn)
         {
-            int eq = strIn.IndexOf("=");
-            if (eq == 0) return "";
-            if (eq > 0) return strIn.Substring(0, eq);
+            int delimiter = strIn.IndexOf("=");
+            if (delimiter == 0) return "";
+            if (delimiter > 0) return strIn.Substring(0, delimiter);
             return strIn;
         }
 
         // isolate program name
         private static string GetName(string strIn)
         {
-            int dot = strIn.IndexOf(".");
-            return strIn.Substring(0, dot);
+            int delimiter = strIn.IndexOf(".");
+            return strIn.Substring(0, delimiter);
         }
 
-        // isolate symbolic directive label
+        // isolate symbolic reference label
         private static string GetSymbol(string strIn)
         {
             return strIn.Substring(1, strIn.Length -2);
         }
 
-        // strip comments out of instructions
+        // strip comments from instructions
         private static string StripComments(string strIn)
         {
-            int commentLocation = strIn.IndexOf("/");
-            if (commentLocation == 0) return "";
-            if (commentLocation > 0) return strIn.Substring(0, commentLocation);
+            int delimiter = strIn.IndexOf("/");
+            if (delimiter == 0) return "";
+            if (delimiter > 0) return strIn.Substring(0, delimiter);
             return strIn;
         }
 
         // isolate jump directive
         private static string StripJump(string strIn)
         {
-            int commentLocation = strIn.IndexOf(";");
-            if (commentLocation == 0) return strIn;
-            if (commentLocation > 0) return strIn.Substring(0, commentLocation);
+            int delimiter = strIn.IndexOf(";");
+            if (delimiter == 0) return strIn;
+            if (delimiter > 0) return strIn.Substring(0, delimiter);
             return strIn;
         }
         #endregion
