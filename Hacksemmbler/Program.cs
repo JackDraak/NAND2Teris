@@ -44,12 +44,14 @@ namespace Hacksemmbler
             int argument = 0;
             while(argument < args.Length)
             {
-                // pre-parse input datastream into a handy-dandy List
+                // initialize setup for each input-file in the batch
                 List<string> instructionList;
                 List<string> debugLog;
                 int nextOpenRegister;
                 Dictionary<string, int> symbolTable;
                 InitEncode(out nextOpenRegister, out instructionList, out symbolTable, out debugLog);
+
+                // pre-parse input datastream of instructions into a handy-dandy List... let's call it, instructionList
                 foreach (string inputLine in File.ReadAllLines(args[argument]))
                 {
                     String thisLine = StripComments(inputLine);
@@ -66,13 +68,13 @@ namespace Hacksemmbler
                 {
                     if (LineIsSymbolReference(instructionList[i]))
                     {
-                        debugLog.Add($"{instructionList[i]}: LineIsSymbolReference");
-                        if (!symbolTable.ContainsKey(instructionList[i]))
+                        String label = GetLabel(instructionList[i]);
+                        if (!symbolTable.ContainsKey(label))
                         {
-                            symbolTable.Add(instructionList[i], symbolOffset);
-                            symbolOffset--;
+                            symbolTable.Add(label, symbolOffset);
                             instructionList.RemoveAt(i);
                         }
+                        debugLog.Add($"{instructionList[i]}: LineIsSymbolReference");
                     }
                     symbolOffset++;
                 }
@@ -91,7 +93,7 @@ namespace Hacksemmbler
                     if (instruction.Length > 0)
                     {
                         char test = instruction[0];
-                        // convert @ instructions to hack machine language addresses (16-bit, two-'s complement binary format)
+                        // convert @-instructions to hack machine language addresses
                         if (test == '@')
                         {
                             String address = CleanAddress(instruction);
@@ -106,6 +108,8 @@ namespace Hacksemmbler
                                 }
                                 else
                                 {
+                                    // TODO: symbols are getting reassigned: 
+                                    debugLog.Add($"symbol-lookup failure: {address}");
                                     debugLog.Add($"adding new label to table: {address}\t{nextOpenRegister}");
                                     symbolTable.Add(address, nextOpenRegister);
                                     address = nextOpenRegister.ToString();
@@ -305,8 +309,8 @@ namespace Hacksemmbler
             return strIn.Substring(0, delimiter);
         }
 
-        // isolate symbolic reference label
-        private static string GetSymbol(string strIn)
+        // isolate label
+        private static string GetLabel(string strIn)
         {
             return strIn.Substring(1, strIn.Length -2);
         }
