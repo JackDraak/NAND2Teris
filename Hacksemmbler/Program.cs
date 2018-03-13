@@ -44,11 +44,12 @@ namespace Hacksemmbler
             int argument = 0;
             while(argument < args.Length)
             {
-                // begin parsing input datastream
+                // pre-parse input datastream
                 int next_open_register;
                 List<string> instruction_list;
+                List<string> outDebug; 
                 Dictionary<string, int> symbolTable;
-                InitEncode(out next_open_register, out instruction_list, out symbolTable);
+                InitEncode(out next_open_register, out instruction_list, out symbolTable, out outDebug);
                 foreach (string input_line in File.ReadAllLines(args[argument]))
                 {
                     String thisInstruction = StripComments(input_line);
@@ -57,31 +58,32 @@ namespace Hacksemmbler
                         thisInstruction = StripWhitespace(thisInstruction);
                         instruction_list.Add(thisInstruction);
                     }
-                    // first-pass, build symbol table
-                    int symbol_offset = 0;
-                    for (int i = 0; i < instruction_list.Count; i++)
-                    {
-                        if (LineIsSymbolReference(instruction_list[i]))
-                        {
-                            ///Console.WriteLine($"{instruction_list[i]} evaluates as TRUE: LineIsSymbolReference"); // debug output
-                            if (!symbolTable.ContainsKey(instruction_list[i]))
-                            {
-                                symbolTable.Add(instruction_list[i], symbol_offset);
-                                symbol_offset--;
-                                instruction_list.RemoveAt(i);
-                            }
-                        }
-                        symbol_offset++;
-                    }
                 }
 
-                /*
+                // first-pass, build symbol table
+                int symbol_offset = 0;
+                for (int i = 0; i < instruction_list.Count; i++)
+                {
+                    if (LineIsSymbolReference(instruction_list[i]))
+                    {
+                        ///Console.WriteLine($"{instruction_list[i]} evaluates as TRUE: LineIsSymbolReference"); // debug output
+                        outDebug.Add($"{instruction_list[i]} evaluates as TRUE: LineIsSymbolReference");
+                        if (!symbolTable.ContainsKey(instruction_list[i]))
+                        {
+                            symbolTable.Add(instruction_list[i], symbol_offset);
+                            symbol_offset--;
+                            instruction_list.RemoveAt(i);
+                        }
+                    }
+                    symbol_offset++;
+                }
+
                 // debug output: symbol table
                 for (int i = 0; i < symbolTable.Count; i++)
                 {
-                    Console.WriteLine($"Symbol: {symbolTable.Keys.ElementAt(i)} at address: {symbolTable.Values.ElementAt(i)}");
+                    ///Console.WriteLine($"Symbol: {symbolTable.Keys.ElementAt(i)} at address: {symbolTable.Values.ElementAt(i)}");
+                    outDebug.Add($"Symbol: {symbolTable.Keys.ElementAt(i)} at address: {symbolTable.Values.ElementAt(i)}");
                 }
-                */
 
                 // parse instructions
                 int stripped_offset = 0;
@@ -104,11 +106,13 @@ namespace Hacksemmbler
                                 if (symbolTable.TryGetValue(address, out int value))
                                 {
                                     ///Console.WriteLine($"convert label address: {address}\tto the value: {value}"); // debug output
+                                    outDebug.Add($"convert label address: {address}\tto the value: {value}");
                                     address = value.ToString();
                                 }
                                 else
                                 {
                                     ///Console.WriteLine($"adding new label to table: {address}\t{next_open_register}"); // debug output
+                                    outDebug.Add($"adding new label to table: {address}\t{next_open_register}");
                                     symbolTable.Add(address, next_open_register);
                                     address = next_open_register.ToString();
                                     next_open_register++;
@@ -132,11 +136,16 @@ namespace Hacksemmbler
                 }
 
                 // output encoded data
-                String fileOut = $"_{args[argument]}.hack";
+                String inFile = $"{args[argument]}";
+                String inName = GetName(inFile);
+                String fileOut = $"{inName}.hack";
                 File.Delete(fileOut);
 
                 // convert from list to string
                 File.WriteAllText(fileOut, ThisOutput(outStream), System.Text.Encoding.Default);
+
+                String debugOut = $"_{inName}.debug";
+                File.WriteAllText(debugOut, ThisOutput(outDebug), System.Text.Encoding.Unicode);
 
                 // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
                 // Chill until user hits enter or return, then exit (or continue batch).
@@ -147,10 +156,11 @@ namespace Hacksemmbler
         }
 
         // for batch processing, re-init before each input file
-        private static void InitEncode(out int next_open_register, out List<string> instruction_list, out Dictionary<string, int> symbolTable)
+        private static void InitEncode(out int next_open_register, out List<string> instruction_list, out Dictionary<string, int> symbolTable, out List<string> outDebug)
         {
             next_open_register = 16;
             instruction_list = new List<String>();
+            outDebug = new List<String>();
             symbolTable = new Dictionary<String, int>();
             symbolTable = PredefineSymbols(symbolTable);
         }
@@ -297,6 +307,13 @@ namespace Hacksemmbler
             if (eq == 0) return "";
             if (eq > 0) return strIn.Substring(0, eq);
             return strIn;
+        }
+
+        // isolate program name
+        private static string GetName(string strIn)
+        {
+            int dot = strIn.IndexOf(".");
+            return strIn.Substring(0, dot);
         }
 
         // isolate symbolic directive label
