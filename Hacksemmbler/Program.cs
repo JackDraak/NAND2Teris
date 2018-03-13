@@ -147,12 +147,16 @@ namespace Hacksemmbler
                 File.Delete(fileOut);
 
                 // convert from list to string
-                string dataOut = "";
-                for (int i = 0; i < outStream.Count; i++)
-                {
-                    dataOut = (dataOut + outStream.ElementAt(i) + "\r\n");
-                }
-                System.IO.File.WriteAllText(fileOut, dataOut);
+                //string dataOut = "";
+                //File.OpenWrite(fileOut);
+                //for (int i = 0; i < outStream.Count; i++)
+                //{
+                    //dataOut = (dataOut + outStream.ElementAt(i)  + "\r\n"); // NB illegal character? \r\n
+                    //File.AppendAllText(fileOut, outStream.ElementAt(i) + "\r\n", System.Text.Encoding.Default);
+                    // File.WriteAllText(fileOut, outStream.ElementAt(i) + "\r\n", System.Text.Encoding.Default);
+                    File.WriteAllText(fileOut, ThisOutput(outStream), System.Text.Encoding.Default);
+                //}
+                //File.WriteAllText(fileOut, dataOut, System.Text.Encoding.Default);
 
                 // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
                 // Chill until user hits enter or return, then exit (or continue batch).
@@ -166,6 +170,23 @@ namespace Hacksemmbler
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
         // \\ // \\  Internal methods // \\ // \\ 
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
+
+        // convert List of words into a string for output to a file
+        private static string ThisOutput(List<String> list)
+        {
+            using (StringWriter stream_out = new StringWriter())
+            {
+                string line;
+                int i = 0;
+                while (i < list.Count)
+                {
+                    line = list[i];
+                    stream_out.Write(line + "\r\n");
+                    i++;
+                }
+                return stream_out.ToString();
+            }
+        }
 
         // convert decmial address to binary address
         private static string Encode16BitAddress(string address)
