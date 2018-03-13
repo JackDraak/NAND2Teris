@@ -39,11 +39,6 @@ namespace Hacksemmbler
             public string compT; public string destT; public string jumpT;
         };
 
-        struct SymbolEntry
-        {
-            public string tag; public int address;
-        };
-
         static void Main(string[] args)
         {
             // track which argument [input file] we're processing (allows for batch-processing);
@@ -54,8 +49,8 @@ namespace Hacksemmbler
                 int inFile_length = 0;
                 int significant_lines = 0;
                 List<String> instruction_list = new List<String>();
-                List<SymbolEntry> symbol_list = new List<SymbolEntry>();
-                symbol_list = PredefineSymbols(symbol_list);
+                Dictionary<String, int> symbolTable = new Dictionary<String, int>();
+                symbolTable = PredefineSymbols(symbolTable);
                 foreach (string input_line in File.ReadAllLines(args[argument]))
                 {
                     inFile_length++;
@@ -74,21 +69,18 @@ namespace Hacksemmbler
                         symbol_offset++;
                         if (LineIsSymbolReference(instruction))
                         {
-                            SymbolEntry thisSymbol;
-                            thisSymbol.tag = GetSymbol(instruction);
-                            thisSymbol.address = symbol_offset;
-                            if (!symbol_list.Contains(thisSymbol))
+                            if (!symbolTable.ContainsKey(instruction))
                             {
-                                symbol_list.Add(thisSymbol);
+                                symbolTable.Add(instruction, symbol_offset);
                             }
                             symbol_offset--;
                         }
                     }
                 }
                 // debug output: symbol table
-                foreach (SymbolEntry entry in symbol_list)
+                for (int i = 0; i < symbolTable.Count; i++)
                 {
-                    Console.WriteLine($"Symbol: {entry.tag} at address: {entry.address}");
+                    Console.WriteLine($"Symbol: {symbolTable.Keys.ElementAt(i)} at address: {symbolTable.Values.ElementAt(i)}");
                 }
 
                 // parse instructions
@@ -117,7 +109,7 @@ namespace Hacksemmbler
                             // TODO: convert labels to addresses
                             encoded_directive = Encode16BitAddress(address);            
                         }
-                        // parse C-instructions <<and later, handle symbols and pointers.... here, or prior to here>>
+                        // parse C-instructions
                         else
                         {
                             // C-instruction format
@@ -336,32 +328,31 @@ namespace Hacksemmbler
         }
 
         // Populate symbol table with predefined values
-        private static List<SymbolEntry> PredefineSymbols(List<SymbolEntry> symTable)
+        private static Dictionary<String, int> PredefineSymbols(Dictionary<String, int> symTable)
         {
-            SymbolEntry sym;
-            sym.tag = "SP"; sym.address = 0; symTable.Add(sym);
-            sym.tag = "LCL"; sym.address = 1; symTable.Add(sym);
-            sym.tag = "ARG"; sym.address = 2; symTable.Add(sym);
-            sym.tag = "THIS"; sym.address = 3; symTable.Add(sym);
-            sym.tag = "THAT"; sym.address = 4; symTable.Add(sym);
-            sym.tag = "SCREEN"; sym.address = 16384; symTable.Add(sym);
-            sym.tag = "KBD"; sym.address = 24576; symTable.Add(sym);
-            sym.tag = "R0"; sym.address = 0; symTable.Add(sym);
-            sym.tag = "R1"; sym.address = 1; symTable.Add(sym);
-            sym.tag = "R2"; sym.address = 2; symTable.Add(sym);
-            sym.tag = "R3"; sym.address = 3; symTable.Add(sym);
-            sym.tag = "R4"; sym.address = 4; symTable.Add(sym);
-            sym.tag = "R5"; sym.address = 5; symTable.Add(sym);
-            sym.tag = "R6"; sym.address = 6; symTable.Add(sym);
-            sym.tag = "R7"; sym.address = 7; symTable.Add(sym);
-            sym.tag = "R8"; sym.address = 8; symTable.Add(sym);
-            sym.tag = "R9"; sym.address = 9; symTable.Add(sym);
-            sym.tag = "R10"; sym.address = 10; symTable.Add(sym);
-            sym.tag = "R11"; sym.address = 11; symTable.Add(sym);
-            sym.tag = "R12"; sym.address = 12; symTable.Add(sym);
-            sym.tag = "R13"; sym.address = 13; symTable.Add(sym);
-            sym.tag = "R14"; sym.address = 14; symTable.Add(sym);
-            sym.tag = "R15"; sym.address = 15; symTable.Add(sym);
+            symTable.Add("SP", 0);
+            symTable.Add("LCL", 1);
+            symTable.Add("ARG", 2);
+            symTable.Add("THIS", 3);
+            symTable.Add("THAT", 4);
+            symTable.Add("SCREEN", 16384);
+            symTable.Add("KBD", 24576);
+            symTable.Add("R0", 0);
+            symTable.Add("R1", 1);
+            symTable.Add("R2", 2);
+            symTable.Add("R3", 3);
+            symTable.Add("R4", 4);
+            symTable.Add("R5", 5);
+            symTable.Add("R6", 6);
+            symTable.Add("R7", 7);
+            symTable.Add("R8", 8);
+            symTable.Add("R9", 9);
+            symTable.Add("R10", 10);
+            symTable.Add("R11", 11);
+            symTable.Add("R12", 12);
+            symTable.Add("R13", 13);
+            symTable.Add("R14", 14);
+            symTable.Add("R15", 15);
             return symTable;
         }
         #endregion
