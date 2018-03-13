@@ -40,10 +40,11 @@ namespace Hacksemmbler
 
         static void Main(string[] args)
         {
-            // simple sanity check, nothing too fancy
-            if (args.Length == 0)
+            // simple sanity checks, nothing too fancy
+            if (args.Length == 0 || args[0] == "?" || args[0] == "help")
             {
-                Console.WriteLine("USAGE: Hacksemmbler fileOne.asm [fileTwo.asm ... fileEn.asm]");
+                PrintUsage();
+                return;
             }
 
             // track which argument [input file] we're processing (this allows for batch-processing);
@@ -95,7 +96,7 @@ namespace Hacksemmbler
 
                 // End of program, eventually this will exit with a -1, 0, or 1 perhaps.
                 // Chill until user hits enter or return, then exit (or continue batch).
-                Console.WriteLine($"...\nprogram: '{inName}' parsed."); // Press <Enter> to continue/close window.");
+                Console.WriteLine($"...\nprogram: '{inName}' parsed.");
                 if (argument + 1 < args.Length) Console.WriteLine($"Press <Enter> to process {args[argument + 1]}");
                 else Console.WriteLine("Press <Enter> to exit");
                 argument++; Console.ReadLine();
@@ -221,9 +222,7 @@ namespace Hacksemmbler
         {
             int l = strIn.Length;
             int delimiter = strIn.IndexOf("=");
-            //TODO: depreciate: if (delimiter == 0) return "";
-            if (delimiter == l) return StripEq(strIn.Substring(delimiter, l - delimiter));
-            if (delimiter > 0) return StripEq(strIn.Substring(delimiter, l - delimiter));
+            if (delimiter >= 0) return StripEq(strIn.Substring(delimiter, l - delimiter));
             return StripEq(strIn);
         }
 
@@ -292,6 +291,15 @@ namespace Hacksemmbler
             return strIn.StartsWith("(") && strIn.EndsWith(")");
         }
 
+        private static bool LooksLikeValidAsm(string strIn)
+        {
+            // check for .asm : .[aA][sS][mM]
+            var probe = Regex.Match(strIn, @".[aA][sS][mM]");
+            var test = probe.Captures;
+            if (test.Count > 0) return true;
+            return false;
+        }
+
         // parse C-instruction
         private static string ParseCInstruction(List<string> debugLog, string instruction)
         {
@@ -348,6 +356,12 @@ namespace Hacksemmbler
                 }
                 return streamOut.ToString();
             }
+        }
+
+        // display usage statement
+        private static void PrintUsage()
+        {
+            Console.WriteLine("USAGE: Hacksemmbler fileOne.asm [fileTwo.asm ... fileEn.asm]");
         }
 
         // strip comments from instructions
