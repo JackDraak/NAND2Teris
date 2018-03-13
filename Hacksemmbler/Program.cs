@@ -41,10 +41,10 @@ namespace Hacksemmbler
         static void Main(string[] args)
         {
             // simple sanity checks, nothing too fancy
-            if (args.Length == 0 || args[0] == "?" || args[0] == "help")
+            if (args.Length == 0 || args[0] == "?" || args[0] == "help" || !LooksLikeValidAsm(args[0]))
             {
                 PrintUsage();
-                ///return;
+                return;
             }
 
             // track which argument [input file] we're processing (this allows for batch-processing);
