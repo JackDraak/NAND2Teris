@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace Hacksemmbler
 /*  For project 6 of part I of "From Nand to Tetris", my take on the Hack Assembler: Hacksemmbler
  *  Be warned, my programming is not industrial-strength; I'm just doing this for fun and self-
- *  development. 
+ *  development. @JackDraak
  *  
  *  Primary specification reference: http://nand2tetris.org/course.php (topic: assembler)
  *  
@@ -25,8 +25,9 @@ namespace Hacksemmbler
  *      - generate instruction sequence free of comments/whitespace
  *      - record labels in symbol table
  *      - allocate pointers and record in symbol table
- *      - convert C-instructions and @_instructions to machine code
+ *      - encode addresses into machine language
  *          - using symbol table as needed
+ *      - encode C-instructions and @_instructions to machine language
  * */
 {
     class Program
@@ -39,8 +40,7 @@ namespace Hacksemmbler
 
         static void Main(string[] args)
         {
-            // Simple sanity checks, nothing too fancy... We could pass all args through LooksLikeValidAsm,
-            // we could also make LLVA() more robust.
+            // Simple sanity checks, could positively be more robust if extended for a broader audience.
             if (args.Length == 0 || args[0] == "?" || args[0] == "help" || !LooksLikeValidAsm(args[0])) 
             {
                 PrintUsage();
@@ -52,8 +52,7 @@ namespace Hacksemmbler
             while(argument < args.Length)
             {
                 // Initialize setup for each input-file in the batch.
-                List<string> instructionList;
-                List<string> debugLog;
+                List<string> instructionList, debugLog;
                 int nextOpenRegister;
                 Dictionary<string, int> symbolTable;
                 InitEncode(out nextOpenRegister, out instructionList, out encodeHeader, out symbolTable, out debugLog);
@@ -68,36 +67,16 @@ namespace Hacksemmbler
                 DebugSymbols(debugLog, symbolTable);
 
                 // Parse and encode instructionList. 
-                string encodedDirective = "";
-                List<String> encodedInstructions = new List<String>();
-                foreach (string instruction in instructionList)
-                {
-                    if (instruction.Length > 0)
-                    {
-                        // Convert @-instructions and C-instructions to hack machine language encoding.
-                        encodedDirective = EncodeDirective(debugLog, ref nextOpenRegister, symbolTable, instruction);
-                        encodedInstructions.Add(encodedDirective);
-                    }
-                }
+                List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolTable);
 
                 // Output encoded data.
-                String inFile = $"{args[argument]}";
-                String inName = GetName(inFile);
-                String fileOut = $"{inName}.hack";
-                File.Delete(fileOut);
-                File.WriteAllText(fileOut, ListAsString(encodedInstructions), System.Text.Encoding.ASCII);
+                string programName = OutputProgram(args, argument, encodedInstructions);
 
                 // Output debug stream.
-                String debugOut = $"_{inName}.debug";
-                File.Delete(debugOut);
-                File.WriteAllText(debugOut, ListAsString(debugLog), System.Text.Encoding.Unicode);
+                OutputDebug(debugLog, programName);
 
-                // Input file processed; eventually this will exit with a -1, 0, or 1 perhaps.
                 // Chill until user hits enter or return, then exit (or continue batch).
-                Console.WriteLine($"...\nprogram: '{inName}' parsed and encoded.");
-                if (argument + 1 < args.Length) Console.WriteLine($"Press <Enter> to encode {args[argument + 1]}");
-                else Console.WriteLine("Press <Enter> to exit");
-                argument++; Console.ReadLine();
+                argument = ContinueOrExit(args, argument, programName);
             }
         }
 
@@ -142,6 +121,17 @@ namespace Hacksemmbler
             catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
+
+        // Called after each input file is processed; eventually this will exit with a -1, 0, or 1 perhaps.
+        private static int ContinueOrExit(string[] args, int argument, string programName)
+        {
+            Console.WriteLine($"...\nprogram: '{programName}' parsed and encoded.");
+            if (argument + 1 < args.Length) Console.WriteLine($"Press <Enter> to encode {args[argument + 1]}");
+            else Console.WriteLine("Press <Enter> to exit");
+            argument++; Console.ReadLine();
+            return argument;
+        }
+
         // Generate symbolTable debug output.
         private static void DebugSymbols(List<string> debugLog, Dictionary<string, int> symbolTable)
         {
@@ -157,6 +147,22 @@ namespace Hacksemmbler
                 }
                 debugLog.Add($"Symbol: {symbolTable.Keys.ElementAt(i)}\t\t{symbolTable.Values.ElementAt(i)}");
             }
+        }
+
+        // Wrapper for encoding operation, to help keep Main tidy.
+        private static List<string> DoEncode(List<string> instructionList, List<string> debugLog, 
+                                             ref int nextOpenRegister, Dictionary<string, int> symbolTable)
+        {
+            List<String> encodedInstructions = new List<String>();
+            foreach (string instruction in instructionList)
+            {
+                if (instruction.Length > 0)
+                {
+                    // Convert @-instructions and C-instructions to hack machine language encoding.
+                    encodedInstructions.Add(EncodeDirective(debugLog, ref nextOpenRegister, symbolTable, instruction));
+                }
+            }
+            return encodedInstructions;
         }
 
         // Encode binary address from decimal address.
@@ -247,7 +253,7 @@ namespace Hacksemmbler
                     }
                     else
                     {
-                        debugLog.Add($"\t\t\tSymbol-lookup failure: {address}={nextOpenRegister} assigned");
+                        debugLog.Add($"\t\t\tSymbol-lookup failure: {address}={nextOpenRegister} now assigned");
                         symbolTable.Add(address, nextOpenRegister);
                         address = nextOpenRegister.ToString();
                         nextOpenRegister++;
@@ -321,7 +327,7 @@ namespace Hacksemmbler
             return strIn.StartsWith("(") && strIn.EndsWith(")");
         }
 
-        // Convert List into a string for output to a file.
+        // Convert a List<String> into a continuous string for output to a file.
         private static string ListAsString(List<String> listIn)
         {
             using (StringWriter streamOut = new StringWriter())
@@ -338,6 +344,7 @@ namespace Hacksemmbler
             }
         }
 
+        // Validate input assembly file(s).
         private static bool LooksLikeValidAsm(string strIn)
         {
             // For now, this simply checks for "*.asm" : .[aA][sS][mM]
@@ -345,6 +352,24 @@ namespace Hacksemmbler
             var test = probe.Captures;
             if (test.Count > 0) return true;
             return false;
+        }
+
+        // Output debugging information.
+        private static void OutputDebug(List<string> debugLog, string inName)
+        {
+            String debugOut = $"_{inName}.debug";
+            File.Delete(debugOut);
+            File.WriteAllText(debugOut, ListAsString(debugLog), System.Text.Encoding.Unicode);
+        }
+        
+        // Output machine-encoded program.
+        private static string OutputProgram(string[] args, int argument, List<string> encodedInstructions)
+        {
+            String inName = GetName(args[argument]);
+            String fileOut = $"{inName}.hack";
+            File.Delete(fileOut);
+            File.WriteAllText(fileOut, ListAsString(encodedInstructions), System.Text.Encoding.ASCII);
+            return inName;
         }
 
         // Pre-parse input datastream (remove comments and whitespace).
@@ -361,7 +386,7 @@ namespace Hacksemmbler
             }
         }
 
-        // Prepend string: 'str' with string: 'prefix'.
+        // Prepend string: 'strIn' with string: 'prefix'.
         private static string Prepend(string strIn, string prefix)
         {
             bool first = true;
@@ -460,6 +485,7 @@ namespace Hacksemmbler
         }
 
         // Destination encoding lookup table.
+        // TODO: target for simplification... why not handle each bit, (A, D, M), individually?
         private static string EncodeDest(string strIn)
         {
             switch (strIn)
