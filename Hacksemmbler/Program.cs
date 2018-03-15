@@ -52,6 +52,7 @@ namespace Hacksemmbler
             while(argument < args.Length)
             {
                 // Initialize setup for each input-file in the batch.
+                String thisProgram = GetProgramName(args, argument);
                 List<string> instructionList, debugLog;
                 int nextOpenRegister;
                 Dictionary<string, int> symbolTable;
@@ -60,11 +61,14 @@ namespace Hacksemmbler
                 // Pre-parse input-stream of instructions into a handy-dandy List... let's call it: instructionList.
                 PreParse(args, argument, instructionList);
 
+                // Output parsed instructions.
+                DebugPreParsed(thisProgram, true, instructionList, debugLog);
+
                 // On first-pass, build requisite symbol table.
                 BuildSymbolTable(instructionList, debugLog, symbolTable);
 
                 // Debug output: symbol table.
-                DebugSymbols(debugLog, symbolTable);
+                DebugSymbols(debugLog, symbolTable, thisProgram, true);
 
                 // Parse and encode instructionList. 
                 List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolTable);
@@ -88,7 +92,7 @@ namespace Hacksemmbler
         // Setup symbolTable from assembly instructionList.
         private static void BuildSymbolTable(List<string> instructionList, List<string> debugLog, Dictionary<string, int> symbolTable)
         {
-            bool header = false;
+            ///bool header = false;
             int symbolOffset = 0;
             for (int i = 0; i < instructionList.Count; i++)
             {
@@ -100,7 +104,7 @@ namespace Hacksemmbler
                         symbolTable.Add(label, symbolOffset);
                         instructionList.RemoveAt(i);
                     }
-                    if (!header)
+            /*        if (!header)
                     {
                         debugLog.Add($"------\t------\t\t-------------");
                         debugLog.Add($"Offset\tSymbol\t\tDetail");
@@ -108,6 +112,7 @@ namespace Hacksemmbler
                         header = true;
                     }
                     debugLog.Add($"{symbolOffset})\t{instructionList[i]}\t\t: Line Is Symbol Reference");
+            */
                 }
                 symbolOffset++;
             }
@@ -132,20 +137,65 @@ namespace Hacksemmbler
             return argument;
         }
 
-        // Generate symbolTable debug output.
-        private static void DebugSymbols(List<string> debugLog, Dictionary<string, int> symbolTable)
+        // Generate parsed-instruction-list debug output.
+        private static void DebugPreParsed(String thisName, bool outToFile, List<string> thisList, List<string> debugLog)
         {
             bool header = false;
-            for (int i = 0; i < symbolTable.Count; i++)
+            List<string> fileOut = new List<string>();
+            for (int i = 0; i < thisList.Count; i++)
             {
                 if (!header)
                 {
-                    debugLog.Add($"\t-------\t\t\t--------");
-                    debugLog.Add($"\tSymbol:\t\t\tAddress:");
-                    debugLog.Add($"\t-------\t\t\t--------");
+                 //   debugLog.Add($"Line#\tPre-Parsed Instruction Set");
+                 //   debugLog.Add($"-----\t--------------------------");
                     header = true;
+                    if (outToFile)
+                    {
+                        fileOut.Add($"Line#\tPre-Parsed Instruction Set");
+                        fileOut.Add($"-----\t--------------------------");
+                    }
                 }
-                debugLog.Add($"Symbol: {symbolTable.Keys.ElementAt(i)}\t\t{symbolTable.Values.ElementAt(i)}");
+                //debugLog.Add($"{i})\t\t{thisList[i]}");
+                if (outToFile)
+                {
+                    fileOut.Add($"{i})\t\t{thisList[i]}");
+                }
+            }
+            
+            if (outToFile)
+            {
+                String outName = $"_{thisName}.preparsed";
+                File.Delete(outName);
+                File.WriteAllText(outName, ListAsString(fileOut), System.Text.Encoding.Unicode);
+            }
+        }
+
+        // Generate symbolTable debug output.
+        private static void DebugSymbols(List<string> debugLog, Dictionary<string, int> symbolTable, string thisName, bool outToFile)
+        {
+            if (outToFile)
+            {
+                String outName = $"_{thisName}.symbolTable";
+                File.Delete(outName);
+                List<string> thisTable = new List<string>();
+                foreach(var thisPair in symbolTable)
+                {
+                    var thisVal = thisPair.Value;
+                    List<string> keyList = new List<string>();
+                    List<int> valList = new List<int>();
+                    foreach (var myPair in symbolTable)
+                    {
+                        var myKey = myPair.Key;
+                        var myVal = myPair.Value;
+                        if (myVal == thisVal)
+                        {
+                            keyList.Add(myKey);
+                        }
+                    }
+                    ///Console.WriteLine($"Value: {thisVal}\t{ListOfValues(keyList)}");
+                    thisTable.Add($"Value: {thisVal}\t{ListOfValues(keyList)}");
+                }
+                File.WriteAllText(outName, ListAsString(thisTable), System.Text.Encoding.Unicode);
             }
         }
 
@@ -309,6 +359,13 @@ namespace Hacksemmbler
             return strIn.Substring(0, delimiter);
         }
 
+        // Return name of program in the que.
+        private static string GetProgramName(string[] args, int argument)
+        {
+            String inName = GetName(args[argument]);
+            return inName;
+        }
+
         // For batch processing, re-init before each input file: Lists, tables, debug & netOpenRegister.
         private static void InitEncode(out int nextOpenRegister, out List<string> instructionList, out bool encodeHeader,
                                        out Dictionary<string, int> symbolTable, out List<string> outDebug)
@@ -338,6 +395,40 @@ namespace Hacksemmbler
                 {
                     line = listIn[i];
                     streamOut.Write(line + "\r\n");
+                    i++;
+                }
+                return streamOut.ToString();
+            }
+        }
+
+        // Convert a List<string> into a continuous string for output to a file.
+        private static string ListOfValues(List<string> listIn)
+        {
+            using (StringWriter streamOut = new StringWriter())
+            {
+                string thisVal;
+                int i = 0;
+                while (i < listIn.Count)
+                {
+                    thisVal = listIn[i];
+                    streamOut.Write(thisVal + ", ");
+                    i++;
+                }
+                return streamOut.ToString();
+            }
+        }
+
+        // Convert a List<int> into a continuous string for output to a file.
+        private static string ListOfValues(List<int> listIn)
+        {
+            using (StringWriter streamOut = new StringWriter())
+            {
+                int thisVal;
+                int i = 0;
+                while (i < listIn.Count)
+                {
+                    thisVal = listIn[i];
+                    streamOut.Write(thisVal + ", ");
                     i++;
                 }
                 return streamOut.ToString();
