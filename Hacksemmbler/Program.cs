@@ -226,9 +226,9 @@ namespace Hacksemmbler
                         }
                     }
                 } */
-                thisTable.Sort();
+                //..thisTable.Sort();
                 //int symbolCount = thisTable.Count;
-                List<string> unique = thisTable.Distinct().ToList(); // NB trimming dupes for now.
+                //..List<string> unique = thisTable.Distinct().ToList(); // NB trimming dupes for now.
                 //int symbolCountUnique = unique.Count;
                 //thisTable.Add($"Full Table Count: {symbolCount}\tDupes:{symbolCount - symbolCountUnique}");
                 //fileOut.Sort();
