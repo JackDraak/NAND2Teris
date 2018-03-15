@@ -67,11 +67,11 @@ namespace Hacksemmbler
                 // On first-pass, build requisite symbol table.
                 BuildSymbolTable(instructionList, debugLog, symbolTable);
 
-                // Debug output: symbol table.
-                DebugSymbols(debugLog, symbolTable, thisProgram, true);
-
                 // Parse and encode instructionList. 
                 List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolTable);
+
+                // Debug output: symbol table.
+                DebugSymbols(debugLog, symbolTable, thisProgram, true);
 
                 // Output encoded data.
                 string programName = OutputProgram(args, argument, encodedInstructions);
@@ -212,9 +212,9 @@ namespace Hacksemmbler
                             keyList.Add(myKey);
                         }
                     }
-                    ///Console.WriteLine($"Value: {thisVal}\t{ListOfValues(keyList)}");
-                    thisTable.Add($"Value: {thisVal}\t{ListOfValues(keyList)}");
+                    thisTable.Add($"Value: {thisVal}\t{ListOfValues(keyList)}");           
                 }
+                thisTable.Sort();
                 File.WriteAllText(outName, ListAsString(thisTable), System.Text.Encoding.Unicode);
             }
         }
