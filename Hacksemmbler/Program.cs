@@ -214,7 +214,24 @@ namespace Hacksemmbler
                     }
                     thisTable.Add($"Value: {thisVal}\t{ListOfValues(keyList)}");           
                 }
+                List<string> fileOut = new List<string>();
+                /*foreach (var thisPair in symbolTable) // dont think this did squat.
+                {
+                    var thisKey = thisPair.Key;
+                    foreach (string str in thisTable)
+                    {
+                        if (str.Contains(thisKey))
+                        {
+                            fileOut.Add(str);
+                        }
+                    }
+                } */
                 thisTable.Sort();
+                //int symbolCount = thisTable.Count;
+                List<string> unique = thisTable.Distinct().ToList(); // NB trimming dupes for now.
+                //int symbolCountUnique = unique.Count;
+                //thisTable.Add($"Full Table Count: {symbolCount}\tDupes:{symbolCount - symbolCountUnique}");
+                //fileOut.Sort();
                 File.WriteAllText(outName, ListAsString(thisTable), System.Text.Encoding.Unicode);
             }
         }
