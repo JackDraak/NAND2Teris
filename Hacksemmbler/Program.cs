@@ -141,13 +141,12 @@ namespace Hacksemmbler
         private static void DebugPreParsed(String thisName, bool outToFile, List<string> thisList, List<string> debugLog)
         {
             bool header = false;
+            int localOffset = 0;
             List<string> fileOut = new List<string>();
             for (int i = 0; i < thisList.Count; i++)
             {
                 if (!header)
                 {
-                 //   debugLog.Add($"Line#\tPre-Parsed Instruction Set");
-                 //   debugLog.Add($"-----\t--------------------------");
                     header = true;
                     if (outToFile)
                     {
@@ -155,10 +154,19 @@ namespace Hacksemmbler
                         fileOut.Add($"-----\t--------------------------");
                     }
                 }
-                //debugLog.Add($"{i})\t\t{thisList[i]}");
                 if (outToFile)
                 {
-                    fileOut.Add($"{i})\t\t{thisList[i]}");
+                    // symbol lines
+                    if (LineIsSymbolReference(thisList[i]))
+                    {
+                        fileOut.Add($"---)\t\t{thisList[i]}");
+                    }
+                    else
+                    // regular lines
+                    {
+                        fileOut.Add($"{localOffset})\t\t{thisList[i]}");
+                        localOffset++;
+                    }
                 }
             }
             
@@ -204,12 +212,14 @@ namespace Hacksemmbler
                                              ref int nextOpenRegister, Dictionary<string, int> symbolTable)
         {
             List<String> encodedInstructions = new List<String>();
+            int offset = 0;
             foreach (string instruction in instructionList)
             {
                 if (instruction.Length > 0)
                 {
                     // Convert @-instructions and C-instructions to hack machine language encoding.
-                    encodedInstructions.Add(EncodeDirective(debugLog, ref nextOpenRegister, symbolTable, instruction));
+                    encodedInstructions.Add(EncodeDirective(debugLog, ref nextOpenRegister, symbolTable, offset, instruction));
+                    offset++;
                 }
             }
             return encodedInstructions;
@@ -274,19 +284,20 @@ namespace Hacksemmbler
             cInst.cmp = EncodeComp(comp);
             if (!encodeHeader)
             {
-                debugLog.Add($"Dest\tComp\tJump");
-                debugLog.Add($"----\t----\t----");
+                debugLog.Add($"Inst\tDest\tComp\tJump");
+                debugLog.Add($"----\t----\t----\t----");
                 encodeHeader = true;
             }
-            debugLog.Add($"{instruction}\t{dest}\t{comp}\t{jump}\t111 {cInst.cmp} {cInst.dst} {cInst.jmp}");
+            debugLog.Add($"{instruction}\t{dest}\t{comp}\t{jump}\t111  {cInst.cmp}  {cInst.dst}  {cInst.jmp}");
             encodedDirective = "111" + cInst.cmp + cInst.dst + cInst.jmp;
             return encodedDirective;
         }
 
         // Encode @-instructions and C-instructions.
-        private static string EncodeDirective(List<string> debugLog, ref int nextOpenRegister,
-                                              Dictionary<string, int> symbolTable, string instruction)
+        private static string EncodeDirective(List<string> debugLog, ref int nextOpenRegister, Dictionary<string, int> symbolTable,
+                                              int offset, string instruction)
         {
+            List<string> fileLog = new List<string>();
             char test = instruction[0];
             string encodedDirective;
             if (test == '@')
@@ -298,13 +309,17 @@ namespace Hacksemmbler
                 {
                     if (symbolTable.TryGetValue(address, out int value))
                     {
-                        debugLog.Add($"\t\t\tConvert label address: {address}={value}");
+                        string logString = $"({offset})\tConversion:\t{address}={value}";
                         address = value.ToString();
+                        debugLog.Add(logString);
+                        fileLog.Add(logString);
                     }
                     else
                     {
-                        debugLog.Add($"\t\t\tSymbol-lookup failure: {address}={nextOpenRegister} now assigned");
                         symbolTable.Add(address, nextOpenRegister);
+                        string logString = $"({offset})\tNew label:\t{address}={nextOpenRegister}";
+                        debugLog.Add(logString);
+                        fileLog.Add(logString);
                         address = nextOpenRegister.ToString();
                         nextOpenRegister++;
                     }
@@ -315,7 +330,6 @@ namespace Hacksemmbler
             {
                 encodedDirective = EncodeC(debugLog, instruction);
             }
-
             return encodedDirective;
         }
 
