@@ -96,13 +96,25 @@ namespace Hacksemmbler
             int symbolOffset = 0;
             for (int i = 0; i < instructionList.Count; i++)
             {
+                if (symbolOffset == 144 | symbolOffset == 145)
+                {
+                    Console.WriteLine($"{symbolOffset}\tInstr: {instructionList[i]}");
+                }
                 if (LineIsSymbolReference(instructionList[i]))
                 {
                     String label = GetLabel(instructionList[i]);
+                    if (symbolOffset == 144 | symbolOffset == 145)
+                    {
+                        Console.WriteLine($"{symbolOffset}\tLabel: {label}");
+                    }
                     if (!symbolTable.ContainsKey(label))
                     {
+                        if (symbolOffset == 144 | symbolOffset == 145)
+                        {
+                            Console.WriteLine($"New: {label} = {symbolOffset}");
+                        }
                         symbolTable.Add(label, symbolOffset);
-                        instructionList.RemoveAt(i);
+                        //instructionList.RemoveAt(i); // Maybe this isnt the best thing to do?
                     }
             /*        if (!header)
                     {
@@ -114,7 +126,7 @@ namespace Hacksemmbler
                     debugLog.Add($"{symbolOffset})\t{instructionList[i]}\t\t: Line Is Symbol Reference");
             */
                 }
-                symbolOffset++;
+                if (!LineIsSymbolReference(instructionList[i])) symbolOffset++; // NB
             }
         }
 
@@ -215,11 +227,37 @@ namespace Hacksemmbler
             int offset = 0;
             foreach (string instruction in instructionList)
             {
-                if (instruction.Length > 0)
+                if (instruction.Length > 0 && !LineIsSymbolReference(instruction))
                 {
                     // Convert @-instructions and C-instructions to hack machine language encoding.
                     encodedInstructions.Add(EncodeDirective(debugLog, ref nextOpenRegister, symbolTable, offset, instruction));
                     offset++;
+                }
+                else
+                {
+                    // handle symbols
+                    String address = CleanAddress(instruction);
+                    int addressAsInteger;
+                    bool success = int.TryParse(address, out addressAsInteger);
+                    if (!success)
+                    {
+                        if (symbolTable.TryGetValue(address, out int value))
+                        {
+                            string logString = $"({offset})\tConversion:\t{address}={value}";
+                            address = value.ToString();
+                            debugLog.Add(logString);
+                            //fileLog.Add(logString);
+                        }
+                        else
+                        {
+                            symbolTable.Add(address, nextOpenRegister);
+                            string logString = $"({offset})\tNew label:\t{address}={nextOpenRegister}";
+                            debugLog.Add(logString);
+                            //fileLog.Add(logString);
+                            address = nextOpenRegister.ToString();
+                            nextOpenRegister++;
+                        }
+                    }
                 }
             }
             return encodedInstructions;
@@ -307,30 +345,48 @@ namespace Hacksemmbler
                 bool success = int.TryParse(address, out addressAsInteger);
                 if (!success)
                 {
-                    if (symbolTable.TryGetValue(address, out int value))
-                    {
-                        string logString = $"({offset})\tConversion:\t{address}={value}";
-                        address = value.ToString();
-                        debugLog.Add(logString);
-                        fileLog.Add(logString);
-                    }
-                    else
-                    {
-                        symbolTable.Add(address, nextOpenRegister);
-                        string logString = $"({offset})\tNew label:\t{address}={nextOpenRegister}";
-                        debugLog.Add(logString);
-                        fileLog.Add(logString);
-                        address = nextOpenRegister.ToString();
-                        nextOpenRegister++;
-                    }
+                    GetSymbolOrUpdateTable(debugLog, ref nextOpenRegister, symbolTable, offset, fileLog, ref address);
                 }
                 encodedDirective = Encode16BitAddress(address);
             }
             else
             {
-                encodedDirective = EncodeC(debugLog, instruction);
+             /*   if (LineIsSymbolReference(instruction))
+                {
+                    String address = instruction;
+                    int addressAsInteger;
+                    bool success = int.TryParse(instruction, out addressAsInteger);
+                    GetSymbolOrUpdateTable(debugLog, ref nextOpenRegister, symbolTable, offset, fileLog, ref address);
+                }
+                else
+                {
+                }
+                */
+                    encodedDirective = EncodeC(debugLog, instruction);
             }
             return encodedDirective;
+        }
+
+        // Convert symbol or assign label stuff
+        private static void GetSymbolOrUpdateTable(List<string> debugLog, ref int nextOpenRegister, Dictionary<string, int> symbolTable, 
+                                                   int offset, List<string> fileLog, ref string address)
+        {
+            if (symbolTable.TryGetValue(address, out int value))
+            {
+                string logString = $"({offset})\tConversion:\t{address}={value}";
+                address = value.ToString();
+                debugLog.Add(logString);
+                fileLog.Add(logString);
+            }
+            else
+            {
+                symbolTable.Add(address, nextOpenRegister);
+                string logString = $"({offset})\tNew label:\t{address}={nextOpenRegister}";
+                debugLog.Add(logString);
+                fileLog.Add(logString);
+                address = nextOpenRegister.ToString();
+                nextOpenRegister++;
+            }
         }
 
         // Isolate & return computation directive.
