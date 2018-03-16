@@ -80,19 +80,6 @@ namespace Hacksemmbler
                 List<SymbolEntry> symbolTable = new List<SymbolEntry>();
                 InitEncode(out nextOpenRegister, out instructionList, out encodeHeader, out symbolTable, out debugLog);
 
-
-                // Debug output: symbol table. 
-                symbolTable.Add(EnterSymbol("symbol", 42, true));
-                if (SymbolInTable("SCREN", symbolTable))
-                {
-                    Console.WriteLine("PASS: symbolTable LOOKUP");
-                }
-                if (SymbolInTable("symbol", symbolTable))
-                {
-                    Console.WriteLine("PASS: symbolTable INSERT");
-                }
-                DebugSymbols(debugLog, symbolTable, "_temp_Symbols.txt", true);
-
                 // Pre-parse input-stream of instructions into a handy-dandy List... let's call it: instructionList.
                 PreParse(args, argument, instructionList);
 
@@ -688,22 +675,10 @@ namespace Hacksemmbler
 
         private static bool SymbolInTable(string labelOrNot, List<SymbolEntry> symbolTable)
         {
-            //   int symbolOffset = 0;
-            //   bool isSymbol = false;
             for (int i = 0; i < symbolTable.Count; i++)
             {
-                string thisLine = symbolTable[i].GetID();
-                if (LineIsSymbolReference(thisLine))
-                {
-                    //            isSymbol = true;
-                    foreach (var symbolEntry in symbolTable)
-                    {
-                        if (symbolEntry.GetID() == thisLine)
-                        {
-                            return true;
-                        }
-                    }
-                }
+                string thisID = symbolTable[i].GetID();
+                if (labelOrNot == thisID) return true;
             }
             return false;
         }
