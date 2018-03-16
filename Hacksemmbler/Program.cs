@@ -101,7 +101,6 @@ namespace Hacksemmbler
                         if (!success)
                         {
                             // must be a symbol or variable, assign variables
-                            // false if not in table, otherwise returns address
                             bool inTable = false;
                             int thisAddress;
                             foreach (var symbolEntry in symbolTable)
@@ -113,14 +112,12 @@ namespace Hacksemmbler
                                     continue;
                                 }
                             }
-
                             if (!inTable & LineIsSymbolReference(labelOrNot))
                             {
-
+                                // symbol, not variable
                             }
                             else
                             {
-                                ///symbolTable.Add(labelOrNot, nextOpenRegister);
                                 SymbolEntry thisSymbol = new SymbolEntry();
                                 thisSymbol.SetID(labelOrNot);
                                 thisSymbol.SetAddress(nextOpenRegister);
@@ -139,7 +136,7 @@ namespace Hacksemmbler
                 }
 
                 // Parse and encode instructionList. 
-                List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolDictionary);
+                List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolTable);
 
                 // Debug output: symbol table. 
                 DebugSymbols(debugLog, symbolTable, thisProgram, true);
@@ -267,7 +264,7 @@ namespace Hacksemmbler
                     var thisAddress = symbolEntry.GetAddress();
                     var isData = symbolEntry.IsData();
 
-                    thisTable.Add($"{thisID}\t{isData:is Data}\t{thisAddress}");           
+                    thisTable.Add($"{thisAddress}\t{isData:is Data}\t{thisID}");           
                 }
                 thisTable.Sort();
                 File.WriteAllText(outName, ListAsString(thisTable), System.Text.Encoding.Unicode);
@@ -276,7 +273,7 @@ namespace Hacksemmbler
 
         // Wrapper for encoding operation, to help keep Main tidy.
         private static List<string> DoEncode(List<string> instructionList, List<string> debugLog, 
-                                             ref int nextOpenRegister, Dictionary<string, int> symbolTable)
+                                             ref int nextOpenRegister, List<SymbolEntry> symbolTable)
         {
             List<String> encodedInstructions = new List<String>();
             int offset = 0;
@@ -290,25 +287,40 @@ namespace Hacksemmbler
                 }
                 else
                 {
-                    // Handle symbols.
-                    String address = CleanAddress(instruction);
+                    // Handle symbols. // should be mostly handled by now, except for resolution.
+                    String labelOrNot = CleanAddress(instruction);
                     int addressAsInteger;
-                    bool success = int.TryParse(address, out addressAsInteger);
+                    bool success = int.TryParse(labelOrNot, out addressAsInteger);
                     if (!success)
                     {
-                        if (symbolTable.TryGetValue(address, out int value))
+                        // if (symbolTable.TryGetValue(address, out int value))
+                        bool inTable = false;
+                        int thisAddress = 0;
+                        foreach (var symbolEntry in symbolTable)
                         {
-                            string logString = $"({offset})\tConversion:\t{address}={value}";
-                            address = value.ToString();
-                            debugLog.Add(logString);
+                            if (symbolEntry.GetID() == labelOrNot)
+                            {
+                                thisAddress = symbolEntry.GetAddress();
+                                inTable = true;
+                                continue;
+                            }
+                        }
+                        if (!inTable)
+                        {
+                            // is this still occuring? 
+                            Console.WriteLine("DoEncode() hit address exception");
+                          //  string logString = $"({offset})\tConversion:\t{labelOrNot}={thisAddress}";
+                          //  labelOrNot = thisAddress.ToString();
+                          //  debugLog.Add(logString);
                         }
                         else
                         {
-                            symbolTable.Add(address, nextOpenRegister);
-                            string logString = $"({offset})\tNew label:\t{address}={nextOpenRegister}";
-                            debugLog.Add(logString);
-                            address = nextOpenRegister.ToString();
-                            nextOpenRegister++;
+
+                         //   symbolTable.Add(labelOrNot, nextOpenRegister);
+                         //   string logString = $"({offset})\tNew label:\t{labelOrNot}={nextOpenRegister}";
+                         //   debugLog.Add(logString);
+                         //   labelOrNot = nextOpenRegister.ToString();
+                         //   nextOpenRegister++;
                         }
                     }
                 }
@@ -385,7 +397,7 @@ namespace Hacksemmbler
         }
 
         // Encode @-instructions and C-instructions.
-        private static string EncodeDirective(List<string> debugLog, ref int nextOpenRegister, Dictionary<string, int> symbolTable,
+        private static string EncodeDirective(List<string> debugLog, ref int nextOpenRegister, List<SymbolEntry> symbolTable,
                                               int offset, string instruction)
         {
             List<string> fileLog = new List<string>();
@@ -410,23 +422,38 @@ namespace Hacksemmbler
         }
 
         // Convert symbol or assign label stuff
-        private static void GetSymbolOrUpdateTable(List<string> debugLog, ref int nextOpenRegister, Dictionary<string, int> symbolTable, 
-                                                   int offset, List<string> fileLog, ref string address)
+        private static void GetSymbolOrUpdateTable(List<string> debugLog, ref int nextOpenRegister, List<SymbolEntry> symbolTable, 
+                                                   int offset, List<string> fileLog, ref string labelOrNot)
         {
-            if (symbolTable.TryGetValue(address, out int value))
+            bool inTable = false;
+            int thisAddress = 0;
+            foreach (var symbolEntry in symbolTable)
             {
-                string logString = $"({offset})\tConversion:\t{address}={value}";
-                address = value.ToString();
+                if (symbolEntry.GetID() == labelOrNot)
+                {
+                    thisAddress = symbolEntry.GetAddress();
+                    inTable = true;
+                    continue;
+                }
+            }
+            if (inTable)
+            {
+                string logString = $"({offset})\tConversion:\t{labelOrNot}={thisAddress}";
+                //labelOrNot = thisAddress.ToString();
                 debugLog.Add(logString);
                 fileLog.Add(logString);
             }
             else
             {
-                symbolTable.Add(address, nextOpenRegister);
-                string logString = $"({offset})\tNew label:\t{address}={nextOpenRegister}";
+                SymbolEntry thisSymbol = new SymbolEntry();
+                thisSymbol.SetID(labelOrNot);
+                thisSymbol.SetAddress(nextOpenRegister);
+                thisSymbol.IsCode(true);
+                symbolTable.Add(thisSymbol);
+                string logString = $"({offset})\tNew label:\t{labelOrNot}={nextOpenRegister}";
                 debugLog.Add(logString);
                 fileLog.Add(logString);
-                address = nextOpenRegister.ToString();
+                //labelOrNot = nextOpenRegister.ToString();
                 nextOpenRegister++;
             }
         }
@@ -742,33 +769,43 @@ namespace Hacksemmbler
             }
         }
 
+        private static SymbolEntry EnterSymbol(string name, int address, bool isCode)
+        {
+            SymbolEntry se = new SymbolEntry();
+            se.SetID(name);
+            se.SetAddress(address);
+            se.IsCode(isCode);
+            return se;
+        }
+
+
         // Populate symbol table with predefined values as per specification.
         private static List<SymbolEntry> PredefineSymbols(List<SymbolEntry> symTable)
         {
-            SymbolEntry se = new SymbolEntry();             se.IsCode(true);
-            se.SetID("SP");         se.SetAddress(0);       symTable.Add(se);
-            se.SetID("LCL");        se.SetAddress(1);       symTable.Add(se);
-            se.SetID("ARG");        se.SetAddress(2);       symTable.Add(se);
-            se.SetID("THIS");       se.SetAddress(3);       symTable.Add(se);
-            se.SetID("THAT");       se.SetAddress(4);       symTable.Add(se);
-            se.SetID("SCREEN");     se.SetAddress(16384);   symTable.Add(se);
-            se.SetID("KBD");        se.SetAddress(24576);   symTable.Add(se);
-            se.SetID("R0");         se.SetAddress(0);       symTable.Add(se);
-            se.SetID("R1");         se.SetAddress(1);       symTable.Add(se);
-            se.SetID("R2");         se.SetAddress(2);       symTable.Add(se);
-            se.SetID("R3");         se.SetAddress(3);       symTable.Add(se);
-            se.SetID("R4");         se.SetAddress(4);       symTable.Add(se);
-            se.SetID("R5");         se.SetAddress(5);       symTable.Add(se);
-            se.SetID("R6");         se.SetAddress(6);       symTable.Add(se);
-            se.SetID("R7");         se.SetAddress(7);       symTable.Add(se);
-            se.SetID("R8");         se.SetAddress(8);       symTable.Add(se);
-            se.SetID("R9");         se.SetAddress(9);       symTable.Add(se);
-            se.SetID("R10");        se.SetAddress(10);      symTable.Add(se);
-            se.SetID("R11");        se.SetAddress(11);      symTable.Add(se);
-            se.SetID("R12");        se.SetAddress(12);      symTable.Add(se);
-            se.SetID("R13");        se.SetAddress(13);      symTable.Add(se);
-            se.SetID("R14");        se.SetAddress(14);      symTable.Add(se);
-            se.SetID("R15");        se.SetAddress(15);      symTable.Add(se);
+            symTable.Add(EnterSymbol("SP", 0, true));
+            symTable.Add(EnterSymbol("LCL", 1, true));
+            symTable.Add(EnterSymbol("ARG", 2, true));
+            symTable.Add(EnterSymbol("THIS", 3, true));
+            symTable.Add(EnterSymbol("THAT", 4, true));
+            symTable.Add(EnterSymbol("SCREEN", 16384, true));
+            symTable.Add(EnterSymbol("KBD", 24576, true));
+            symTable.Add(EnterSymbol("R0", 0, true));
+            symTable.Add(EnterSymbol("R1", 1, true));
+            symTable.Add(EnterSymbol("R2", 2, true));
+            symTable.Add(EnterSymbol("R3", 3, true));
+            symTable.Add(EnterSymbol("R4", 4, true));
+            symTable.Add(EnterSymbol("R5", 5, true));
+            symTable.Add(EnterSymbol("R6", 6, true));
+            symTable.Add(EnterSymbol("R7", 7, true));
+            symTable.Add(EnterSymbol("R8", 8, true));
+            symTable.Add(EnterSymbol("R9", 9, true));
+            symTable.Add(EnterSymbol("R10", 10, true));
+            symTable.Add(EnterSymbol("R11", 11, true));
+            symTable.Add(EnterSymbol("R12", 12, true));
+            symTable.Add(EnterSymbol("R13", 13, true));
+            symTable.Add(EnterSymbol("R14", 14, true));
+            symTable.Add(EnterSymbol("R15", 15, true));
+
             return symTable;
         }
         #endregion
