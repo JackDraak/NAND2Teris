@@ -80,6 +80,19 @@ namespace Hacksemmbler
                 List<SymbolEntry> symbolTable = new List<SymbolEntry>();
                 InitEncode(out nextOpenRegister, out instructionList, out encodeHeader, out symbolTable, out debugLog);
 
+
+                // Debug output: symbol table. 
+                symbolTable.Add(EnterSymbol("symbol", 42, true));
+                if (SymbolInTable("SCREN", symbolTable))
+                {
+                    Console.WriteLine("PASS: symbolTable LOOKUP");
+                }
+                if (SymbolInTable("symbol", symbolTable))
+                {
+                    Console.WriteLine("PASS: symbolTable INSERT");
+                }
+                DebugSymbols(debugLog, symbolTable, "_temp_Symbols.txt", true);
+
                 // Pre-parse input-stream of instructions into a handy-dandy List... let's call it: instructionList.
                 PreParse(args, argument, instructionList);
 
@@ -421,6 +434,16 @@ namespace Hacksemmbler
             return encodedDirective;
         }
 
+        // Return a SymboLEntry with the supplied values.
+        private static SymbolEntry EnterSymbol(string name, int address, bool isCode)
+        {
+            SymbolEntry se = new SymbolEntry();
+            se.SetID(name);
+            se.SetAddress(address);
+            se.IsCode(isCode);
+            return se;
+        }
+
         // Convert symbol or assign label stuff
         private static void GetSymbolOrUpdateTable(List<string> debugLog, ref int nextOpenRegister, List<SymbolEntry> symbolTable, 
                                                    int offset, List<string> fileLog, ref string labelOrNot)
@@ -663,17 +686,24 @@ namespace Hacksemmbler
             catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
-        private static bool symbolInTable(string address, Dictionary<string, int> symbolTable, int nextOpenRegister)
+        private static bool SymbolInTable(string labelOrNot, List<SymbolEntry> symbolTable)
         {
-            if (symbolTable.TryGetValue(address, out int value))
+            //   int symbolOffset = 0;
+            //   bool isSymbol = false;
+            for (int i = 0; i < symbolTable.Count; i++)
             {
-                address = value.ToString();
-            }
-            else
-            {
-                symbolTable.Add(address, nextOpenRegister);
-                address = nextOpenRegister.ToString();
-                nextOpenRegister++;
+                string thisLine = symbolTable[i].GetID();
+                if (LineIsSymbolReference(thisLine))
+                {
+                    //            isSymbol = true;
+                    foreach (var symbolEntry in symbolTable)
+                    {
+                        if (symbolEntry.GetID() == thisLine)
+                        {
+                            return true;
+                        }
+                    }
+                }
             }
             return false;
         }
@@ -768,16 +798,6 @@ namespace Hacksemmbler
                 default:    return "000";
             }
         }
-
-        private static SymbolEntry EnterSymbol(string name, int address, bool isCode)
-        {
-            SymbolEntry se = new SymbolEntry();
-            se.SetID(name);
-            se.SetAddress(address);
-            se.IsCode(isCode);
-            return se;
-        }
-
 
         // Populate symbol table with predefined values as per specification.
         private static List<SymbolEntry> PredefineSymbols(List<SymbolEntry> symTable)
