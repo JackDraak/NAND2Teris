@@ -37,6 +37,11 @@ namespace Hacksemmbler
         {
             public string cmp, dst, jmp;
         };
+        private class SymbolEntry
+        {
+            // get | set
+
+        }
 
         static void Main(string[] args)
         {
@@ -64,13 +69,50 @@ namespace Hacksemmbler
                 // Output parsed instructions.
                 DebugPreParsed(thisProgram, true, instructionList, debugLog);
 
-                // On first-pass, build requisite symbol table.
+                // On first-pass, build requisite symbol table. [look for label declarations, track offset]
                 BuildSymbolTable(instructionList, debugLog, symbolTable);
+
+                // Second-pass, link symbol table with variables
+                // TODO
+                for (int i = 0; i < instructionList.Count; i++)
+                {
+                    char test = instructionList[i][0];
+                    if (test == '@')
+                    {
+                        String address = CleanAddress(instructionList[i]);
+                        int addressAsInteger;
+                        bool success = int.TryParse(address, out addressAsInteger);
+                        if (!success)
+                        {
+                            // must be a symbol or variable, assign variables
+                            if (!symbolTable.TryGetValue(address, out int value))
+                            {
+                                if (LineIsSymbolReference(address))
+                                {
+
+                                }
+                                else
+                                {
+                                    symbolTable.Add(address, nextOpenRegister);
+                                    Console.WriteLine($"{address}\t{nextOpenRegister}"); // debug output
+                                    debugLog.Add($"variable: {address}\t{nextOpenRegister}");
+                                    address = nextOpenRegister.ToString();
+                                    nextOpenRegister++;
+                                }
+                            }
+                        //    else
+                        //    {
+                        //        address = value.ToString();
+                        //    }
+                            //instructionList[i] = $"@{address}"; // i think this is not required, come to think of it.
+                        }
+                    }
+                }
 
                 // Parse and encode instructionList. 
                 List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolTable);
 
-                // Debug output: symbol table.
+                // Debug output: symbol table. 
                 DebugSymbols(debugLog, symbolTable, thisProgram, true);
 
                 // Output encoded data.
@@ -89,44 +131,24 @@ namespace Hacksemmbler
         // \\ // \\  Internal methods // \\ // \\ 
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
 
-        // Setup symbolTable from assembly instructionList.
+        // Setup symbolTable from assembly instructionList. First pass, assign symbols to symbol table, not variables
         private static void BuildSymbolTable(List<string> instructionList, List<string> debugLog, Dictionary<string, int> symbolTable)
         {
-            ///bool header = false;
             int symbolOffset = 0;
+            bool isSymbol = false;
             for (int i = 0; i < instructionList.Count; i++)
             {
-                if (symbolOffset == 144 | symbolOffset == 145)
-                {
-                    Console.WriteLine($"{symbolOffset}\tInstr: {instructionList[i]}");
-                }
                 if (LineIsSymbolReference(instructionList[i]))
                 {
+                    isSymbol = true;
                     String label = GetLabel(instructionList[i]);
-                    if (symbolOffset == 144 | symbolOffset == 145)
-                    {
-                        Console.WriteLine($"{symbolOffset}\tLabel: {label}");
-                    }
+                  //  label = label.Substring(1, label.Length -2); // NB
                     if (!symbolTable.ContainsKey(label))
                     {
-                        if (symbolOffset == 144 | symbolOffset == 145)
-                        {
-                            Console.WriteLine($"New: {label} = {symbolOffset}");
-                        }
                         symbolTable.Add(label, symbolOffset);
-                        //instructionList.RemoveAt(i); // Maybe this isnt the best thing to do?
                     }
-            /*        if (!header)
-                    {
-                        debugLog.Add($"------\t------\t\t-------------");
-                        debugLog.Add($"Offset\tSymbol\t\tDetail");
-                        debugLog.Add($"------\t------\t\t-------------");
-                        header = true;
-                    }
-                    debugLog.Add($"{symbolOffset})\t{instructionList[i]}\t\t: Line Is Symbol Reference");
-            */
                 }
-                if (!LineIsSymbolReference(instructionList[i])) symbolOffset++; // NB
+                if (!isSymbol) symbolOffset++; // NB
             }
         }
 
@@ -201,7 +223,8 @@ namespace Hacksemmbler
                 foreach(var thisPair in symbolTable)
                 {
                     var thisVal = thisPair.Value;
-                    List<string> keyList = new List<string>();
+                    var thisKey = thisPair.Key;
+                /*    List<string> keyList = new List<string>();
                     List<int> valList = new List<int>();
                     foreach (var myPair in symbolTable)
                     {
@@ -212,26 +235,12 @@ namespace Hacksemmbler
                             keyList.Add(myKey);
                         }
                     }
-                    thisTable.Add($"Value: {thisVal}\t{ListOfValues(keyList)}");           
+                */
+                    thisTable.Add($"{thisKey}\t{thisVal}");           
                 }
-                List<string> fileOut = new List<string>();
-                /*foreach (var thisPair in symbolTable) // dont think this did squat.
-                {
-                    var thisKey = thisPair.Key;
-                    foreach (string str in thisTable)
-                    {
-                        if (str.Contains(thisKey))
-                        {
-                            fileOut.Add(str);
-                        }
-                    }
-                } */
-                //..thisTable.Sort();
-                //int symbolCount = thisTable.Count;
-                //..List<string> unique = thisTable.Distinct().ToList(); // NB trimming dupes for now.
-                //int symbolCountUnique = unique.Count;
-                //thisTable.Add($"Full Table Count: {symbolCount}\tDupes:{symbolCount - symbolCountUnique}");
-                //fileOut.Sort();
+                //List<string> fileOut = new List<string>();
+                thisTable.Sort();
+                
                 File.WriteAllText(outName, ListAsString(thisTable), System.Text.Encoding.Unicode);
             }
         }
@@ -252,7 +261,7 @@ namespace Hacksemmbler
                 }
                 else
                 {
-                    // handle symbols
+                    // Handle symbols.
                     String address = CleanAddress(instruction);
                     int addressAsInteger;
                     bool success = int.TryParse(address, out addressAsInteger);
@@ -263,14 +272,12 @@ namespace Hacksemmbler
                             string logString = $"({offset})\tConversion:\t{address}={value}";
                             address = value.ToString();
                             debugLog.Add(logString);
-                            //fileLog.Add(logString);
                         }
                         else
                         {
                             symbolTable.Add(address, nextOpenRegister);
                             string logString = $"({offset})\tNew label:\t{address}={nextOpenRegister}";
                             debugLog.Add(logString);
-                            //fileLog.Add(logString);
                             address = nextOpenRegister.ToString();
                             nextOpenRegister++;
                         }
@@ -368,17 +375,6 @@ namespace Hacksemmbler
             }
             else
             {
-             /*   if (LineIsSymbolReference(instruction))
-                {
-                    String address = instruction;
-                    int addressAsInteger;
-                    bool success = int.TryParse(instruction, out addressAsInteger);
-                    GetSymbolOrUpdateTable(debugLog, ref nextOpenRegister, symbolTable, offset, fileLog, ref address);
-                }
-                else
-                {
-                }
-                */
                     encodedDirective = EncodeC(debugLog, instruction);
             }
             return encodedDirective;
@@ -419,9 +415,10 @@ namespace Hacksemmbler
         private static string GetDest(string strIn)
         {
             int delimiter = strIn.IndexOf("=");
-            if (delimiter <= 0) return ""; // NB - If there is no assignment (no = sign), return empty string.
             if (delimiter > 0) return strIn.Substring(0, delimiter);
-            return strIn;
+            // NB - If there is no assignment (no = sign), return empty string.
+            else return ""; 
+            //return strIn;
         }
 
         // Isolate & return jump directive.
@@ -439,27 +436,27 @@ namespace Hacksemmbler
             return strIn.Substring(1, strIn.Length - 2);
         }
 
-        // Isolate & return program name from argument(s).
+        // Isolate & return program name from string.
         private static string GetName(string strIn)
         {
             int delimiter = strIn.IndexOf(".");
             return strIn.Substring(0, delimiter);
         }
 
-        // Return name of program in the que.
+        // Return the name of the selected program in the que.
         private static string GetProgramName(string[] args, int argument)
         {
             String inName = GetName(args[argument]);
             return inName;
         }
 
-        // For batch processing, re-init before each input file: Lists, tables, debug & netOpenRegister.
+        // For batch processing, re-init before each input file: Lists, tables, debug & netOpenRegister...
         private static void InitEncode(out int nextOpenRegister, out List<string> instructionList, out bool encodeHeader,
                                        out Dictionary<string, int> symbolTable, out List<string> outDebug)
         {
-            nextOpenRegister = 16;
             encodeHeader = false;
             instructionList = new List<String>();
+            nextOpenRegister = 16;
             outDebug = new List<String>();
             symbolTable = new Dictionary<String, int>();
             symbolTable = PredefineSymbols(symbolTable);
@@ -471,7 +468,7 @@ namespace Hacksemmbler
             return strIn.StartsWith("(") && strIn.EndsWith(")");
         }
 
-        // Convert a List<String> into a continuous string for output to a file.
+        // Convert a List<String> into a compound string for output.
         private static string ListAsString(List<String> listIn)
         {
             using (StringWriter streamOut = new StringWriter())
@@ -488,24 +485,7 @@ namespace Hacksemmbler
             }
         }
 
-        // Convert a List<string> into a continuous string for output to a file.
-        private static string ListOfValues(List<string> listIn)
-        {
-            using (StringWriter streamOut = new StringWriter())
-            {
-                string thisVal;
-                int i = 0;
-                while (i < listIn.Count)
-                {
-                    thisVal = listIn[i];
-                    streamOut.Write(thisVal + ", ");
-                    i++;
-                }
-                return streamOut.ToString();
-            }
-        }
-
-        // Convert a List<int> into a continuous string for output to a file.
+        // Convert a List<int> into a comma-delimited string for output.
         private static string ListOfValues(List<int> listIn)
         {
             using (StringWriter streamOut = new StringWriter())
@@ -522,10 +502,27 @@ namespace Hacksemmbler
             }
         }
 
+        // Convert a List<string> into a comma-delimited string for output.
+        private static string ListOfValues(List<string> listIn)
+        {
+            using (StringWriter streamOut = new StringWriter())
+            {
+                string thisVal;
+                int i = 0;
+                while (i < listIn.Count)
+                {
+                    thisVal = listIn[i];
+                    streamOut.Write(thisVal + ", ");
+                    i++;
+                }
+                return streamOut.ToString();
+            }
+        }
+
         // Validate input assembly file(s).
+        // TODO: make this more robust.
         private static bool LooksLikeValidAsm(string strIn)
         {
-            // For now, this simply checks for "*.asm" : .[aA][sS][mM]
             var probe = Regex.Match(strIn, @".[aA][sS][mM]");
             var test = probe.Captures;
             if (test.Count > 0) return true;
@@ -596,11 +593,10 @@ namespace Hacksemmbler
             return strIn;
         }
 
-        // Return string sans equal-sign.
+        // Return string sans equal-sign(s).
         private static string StripEq(string strIn)
         {
             try { return Regex.Replace(strIn, @"=", "", RegexOptions.None, TimeSpan.FromSeconds(0.3)); }
-            // If we timeout when replacing invalid characters, we return Empty.
             catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
@@ -608,8 +604,22 @@ namespace Hacksemmbler
         private static string StripWhitespace(string strIn)
         {
             try { return Regex.Replace(strIn, @"\s", "", RegexOptions.None, TimeSpan.FromSeconds(0.3)); }
-            // If we timeout when replacing invalid characters, we return Empty.
             catch (RegexMatchTimeoutException) { return String.Empty; }
+        }
+
+        private static bool symbolInTable(string address, Dictionary<string, int> symbolTable, int nextOpenRegister)
+        {
+            if (symbolTable.TryGetValue(address, out int value))
+            {
+                address = value.ToString();
+            }
+            else
+            {
+                symbolTable.Add(address, nextOpenRegister);
+                address = nextOpenRegister.ToString();
+                nextOpenRegister++;
+            }
+            return false;
         }
 
         #endregion
