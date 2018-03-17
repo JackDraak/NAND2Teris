@@ -81,26 +81,28 @@ namespace Hacksemmbler
                 InitEncode(out nextOpenRegister, out instructionList, out encodeHeader, out symbolTable, out debugLog);
 
                 // Pre-parse input-stream of instructions into a handy-dandy List... let's call it: instructionList.
-                // (Get rid of whitespace, including blank lines, and comments, it's for humans, not machines.)
+                // (Get rid of whitespace, including blank lines and comments, that's for humans, not machines.)
                 PreParse(args, argument, instructionList);
 
                 // Output parsed instructions for humans.
-                DebugPreParsed(thisProgram, true, instructionList, debugLog);
+                DebugPreParsed($"_{thisProgram}.preparse", instructionList, debugLog);
 
                 // On first-pass, build requisite symbol table. 
                 // [look for label declarations, track offset]
                 BuildSymbolTable(instructionList, debugLog, symbolTable);
 
                 // Second-pass, link symbol table with variables.
+                // TODO: deal with anaochronisitic return of nextOpenRegister... at this point, we no longer need it
                 nextOpenRegister = LinkVariables(instructionList, debugLog, nextOpenRegister, symbolTable);
 
-                // "Third-pass", Parse variables into absulte addresses.
+                // "Third-pass", Parse variables into absolute addresses.
                 ParseVariables(instructionList, symbolTable);
 
                 // Output pre-encoded but fully parsed instructions, again for humans.
-                DebugPreParsed($"{thisProgram}-final", true, instructionList, debugLog);
+                DebugPreParsed($"_{thisProgram}.postparse", instructionList, debugLog);
 
                 // Parse and encode instructionList for machines* which are Hack-compliant. 
+                // TODO: deal with anaochronisitic use of nextOpenRegister... at this point, we no longer need it [thanks to "pass three"]
                 List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolTable);
 
                 // Debug output: dump symbol table for humans. 
@@ -175,7 +177,7 @@ namespace Hacksemmbler
         }
 
         // Generate parsed-instruction-list debug output.
-        private static void DebugPreParsed(String thisName, bool outToFile, List<string> thisList, List<string> debugLog)
+        private static void DebugPreParsed(String thisName, List<string> thisList, List<string> debugLog)
         {
             bool header = false;
             int localOffset = 0;
@@ -185,32 +187,22 @@ namespace Hacksemmbler
                 if (!header)
                 {
                     header = true;
-                    if (outToFile)
-                    {
-                        fileOut.Add($"Line#\tPre-Parsed Instruction Set");
-                        fileOut.Add($"-----\t--------------------------");
-                    }
+                    fileOut.Add($"Line#\tPre-Parsed Instruction Set");
+                    fileOut.Add($"-----\t--------------------------");
                 }
-                if (outToFile)
+
+                if (LineIsSymbolReference(thisList[i]))
                 {
-                    if (LineIsSymbolReference(thisList[i]))
-                    {
-                        fileOut.Add($"---)\t\t{thisList[i]}");
-                    }
-                    else
-                    {
-                        fileOut.Add($"{localOffset})\t\t{thisList[i]}");
-                        localOffset++;
-                    }
+                    fileOut.Add($"---)\t\t{thisList[i]}");
+                }
+                else
+                {
+                    fileOut.Add($"{localOffset})\t\t{thisList[i]}");
+                    localOffset++;
                 }
             }
-            
-            if (outToFile)
-            {
-                String outName = $"_{thisName}.preparsed";
-                File.Delete(outName);
-                File.WriteAllText(outName, ListAsString(fileOut), System.Text.Encoding.Unicode);
-            }
+            //File.Delete(thisName);
+            File.WriteAllText(thisName, ListAsString(fileOut), System.Text.Encoding.Unicode);
         }
 
         // Generate symbolTable debug output.
@@ -219,7 +211,7 @@ namespace Hacksemmbler
             if (outToFile)
             {
                 String outName = $"_{thisName}.symbolTable";
-                File.Delete(outName);
+                //File.Delete(outName);
                 List<string> thisTable = new List<string>();
                 foreach(var symbolEntry in symbolTable)
                 {
@@ -229,7 +221,7 @@ namespace Hacksemmbler
 
                     thisTable.Add($"{thisAddress}\t{isData:is Data}\t{thisID}");           
                 }
-                thisTable.Sort();
+                //thisTable.Sort();
                 File.WriteAllText(outName, ListAsString(thisTable), System.Text.Encoding.Unicode);
             }
         }
@@ -597,7 +589,7 @@ namespace Hacksemmbler
         private static void OutputDebug(List<string> debugLog, string inName)
         {
             String debugOut = $"_{inName}.debug";
-            File.Delete(debugOut);
+            //File.Delete(debugOut);
             File.WriteAllText(debugOut, ListAsString(debugLog), System.Text.Encoding.Unicode);
         }
         
@@ -606,7 +598,7 @@ namespace Hacksemmbler
         {
             String inName = GetName(args[argument]);
             String fileOut = $"{inName}.hack";
-            File.Delete(fileOut);
+            //File.Delete(fileOut);
             File.WriteAllText(fileOut, ListAsString(encodedInstructions), System.Text.Encoding.ASCII);
             return inName;
         }
