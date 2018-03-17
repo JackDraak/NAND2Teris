@@ -58,6 +58,21 @@ namespace Hacksemmbler
                 address = 0;
                 isData = false;
             }
+
+            public SymbolEntry(string str)
+            {
+                id = str;
+            }
+
+            public SymbolEntry(int num)
+            {
+                address = num;
+            }
+
+            public SymbolEntry(bool torf)
+            {
+                isData = torf;
+            }
         }
 
         static void Main(string[] args)
@@ -109,31 +124,35 @@ namespace Hacksemmbler
                                 {
                                     inTable = true;
                                     thisAddress = symbolEntry.GetAddress();
+                                    Console.WriteLine($"LOOKUP: {labelOrNot}\t{thisAddress}");
+                                    // what happens to thisAddress?
+                                    instructionList[i] = $"@{thisAddress}";
                                     continue;
                                 }
                             }
                             if (!inTable & LineIsSymbolReference(labelOrNot))
                             {
                                 // symbol, not variable
+                                Console.WriteLine("ERROR how did a symbol get here?");
                             }
-                            else
+                            else if (!inTable)
                             {
                                 SymbolEntry thisSymbol = new SymbolEntry();
+                                Console.WriteLine($"Pass 2 VAR: {labelOrNot}\t{nextOpenRegister}");
                                 thisSymbol.SetID(labelOrNot);
                                 thisSymbol.SetAddress(nextOpenRegister);
                                 thisSymbol.IsCode(false);
                                 symbolTable.Add(thisSymbol);
-
-
-
-                                Console.WriteLine($"{labelOrNot}\t{nextOpenRegister}"); // debug output
                                 debugLog.Add($"variable: {labelOrNot}\t{nextOpenRegister}");
-                             //   labelOrNot = nextOpenRegister.ToString();
+                                //   labelOrNot = nextOpenRegister.ToString();
                                 nextOpenRegister++;
                             }
                         }
                     }
                 }
+
+                // Output parsed instructions.
+                DebugPreParsed($"_{thisProgram}_", true, instructionList, debugLog);
 
                 // Parse and encode instructionList. 
                 List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolTable);
@@ -164,14 +183,14 @@ namespace Hacksemmbler
             bool isSymbol = false;
             for (int i = 0; i < instructionList.Count; i++)
             {
-                if (LineIsSymbolReference(instructionList[i]))
+                String labelOrNot = instructionList[i];
+                if (LineIsSymbolReference(labelOrNot))
                 {
                     isSymbol = true;
-                    String label = GetLabel(instructionList[i]);
                     bool inTable = false;
                     foreach (var symbolEntry in symbolTable)
                     {
-                        if (symbolEntry.GetID() == label)
+                        if (symbolEntry.GetID() == labelOrNot)
                         {
                             inTable = true;
                             continue;
@@ -179,14 +198,18 @@ namespace Hacksemmbler
                     }
                     if (!inTable)
                     {
+                        // TODO strip parens, add to table, remove instruction line
                         SymbolEntry thisSymbol = new SymbolEntry();
-                        thisSymbol.SetID(label);
+                        thisSymbol.SetID(GetLabel(labelOrNot));
                         thisSymbol.SetAddress(symbolOffset);
                         thisSymbol.IsCode(true);
                         symbolTable.Add(thisSymbol);
+                        instructionList.RemoveAt(i); // maybe wait and remove lines at the end, eh?
+
                     }
                 }
                 if (!isSymbol) symbolOffset++; // NB
+                isSymbol = false;
             }
         }
 
@@ -194,7 +217,6 @@ namespace Hacksemmbler
         private static string CleanAddress(string strIn)
         {
             try { return Regex.Replace(strIn, @"@", "", RegexOptions.None, TimeSpan.FromSeconds(0.3)); }
-            // If we timeout when replacing invalid characters, we return Empty.
             catch (RegexMatchTimeoutException) { return String.Empty; }
         }
 
