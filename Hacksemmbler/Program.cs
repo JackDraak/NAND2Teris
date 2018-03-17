@@ -221,8 +221,6 @@ namespace Hacksemmbler
                         thisSymbol.SetAddress(symbolOffset);
                         thisSymbol.IsCode(true);
                         symbolTable.Add(thisSymbol);
-                        //instructionList.RemoveAt(i); // maybe wait and remove lines at the end, eh? or maybe just ignore them later?!?
-
                     }
                 }
                 if (!isSymbol) symbolOffset++; // NB
@@ -348,18 +346,10 @@ namespace Hacksemmbler
                         {
                             // is this still occuring? 
                             Console.WriteLine("DoEncode() hit address exception");
-                          //  string logString = $"({offset})\tConversion:\t{labelOrNot}={thisAddress}";
-                          //  labelOrNot = thisAddress.ToString();
-                          //  debugLog.Add(logString);
                         }
                         else
                         {
 
-                         //   symbolTable.Add(labelOrNot, nextOpenRegister);
-                         //   string logString = $"({offset})\tNew label:\t{labelOrNot}={nextOpenRegister}";
-                         //   debugLog.Add(logString);
-                         //   labelOrNot = nextOpenRegister.ToString();
-                         //   nextOpenRegister++;
                         }
                     }
                 }
@@ -449,21 +439,13 @@ namespace Hacksemmbler
                 bool success = int.TryParse(address, out addressAsInteger);
                 if (!success)
                 {
-                    Console.WriteLine($"PRELOOKUP: {address}");
-                    //GetSymbolOrUpdateTable(debugLog, ref nextOpenRegister, symbolTable, offset, fileLog, ref address);
-
-
-
-
-                    Console.WriteLine($"POSTLOOKUP: {address}");
-                    // TODO NOW
 
                 }
                 encodedDirective = Encode16BitAddress(address);
             }
             else
             {
-                    encodedDirective = EncodeC(debugLog, instruction);
+                encodedDirective = EncodeC(debugLog, instruction);
             }
             return encodedDirective;
         }
