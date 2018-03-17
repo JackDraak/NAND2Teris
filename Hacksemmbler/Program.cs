@@ -32,33 +32,9 @@ namespace Hacksemmbler
 {
     class Program
     {
-        static bool encodeHeader = false;
-
-        struct C_code
-        {
-            public string cmp, dst, jmp;
-        };
-
-        private class SymbolEntry
-        {
-            bool isData;
-            int address;
-            string id;
-
-            public bool IsData()            { return isData; }
-            public int GetAddress()         { return address; }
-            public string GetID()           { return id; }
-            public void IsCode(bool torf)   { isData = !torf; }
-            public void SetAddress(int num) { address = num; }
-            public void SetID(string str)   { id = str; }
-
-            public SymbolEntry()
-            {
-                isData = false;
-                address = 0;
-                id = "";
-            }
-        }
+        static bool logHeaderLogged = false;
+        struct C_code { public string cmp, dst, jmp; };
+        struct CodeSymbol { public string symbol; public int location; };
 
         static void Main(string[] args)
         {
@@ -75,16 +51,16 @@ namespace Hacksemmbler
             {
                 // Initialize setup for each input-file in the batch.
                 List<string> instructionList, debugLog;
-                List<SymbolEntry> symbolTable = new List<SymbolEntry>();
+                List<CodeSymbol> symbolTable;
                 String thisProgram = GetProgramName(args, argument);
                 int nextOpenRegister;
-                InitEncode(out nextOpenRegister, out instructionList, out encodeHeader, out symbolTable, out debugLog);
+                InitEncode(out nextOpenRegister, out instructionList, out logHeaderLogged, out symbolTable, out debugLog);
 
                 // Pre-parse input-stream of instructions into a handy-dandy List... let's call it: instructionList.
-                // (Get rid of whitespace, including blank lines and comments, that's for humans, not machines.)
+                // (Expunge whitespace, including blank lines and comments; that's for humans, not machines.)
                 PreParse(args, argument, instructionList);
 
-                // Output pre-parsed instructions for humans.
+                // Output pre-parsed instructions, for humans.
                 DebugParsed($"_{thisProgram}.preparse", instructionList, debugLog);
 
                 // On first-pass, assign requisite symbol table entries. 
@@ -117,13 +93,14 @@ namespace Hacksemmbler
                 argument = ContinueOrExit(args, argument, programName);
             }
         }
+
         #region Internal Methods
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
         // \\ // \\  Internal methods // \\ // \\ 
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
 
-        // Setup symbolTable from assembly instructionList. First pass, assign symbols to symbol table by offset.
-        private static void AssignSymbols(List<string> instructionList, List<string> debugLog,  List<SymbolEntry> symbolTable)
+        // Setup symbolTable from assembly instructionList. First pass, assign symbols to symbol table indexed by offset.
+        private static void AssignSymbols(List<string> instructionList, List<string> debugLog,  List<CodeSymbol> symbolTable)
         {
             int symbolOffset = 0;
             bool isSymbol = false;
@@ -136,7 +113,7 @@ namespace Hacksemmbler
                     bool inTable = false;
                     foreach (var symbolEntry in symbolTable)
                     {
-                        if (symbolEntry.GetID() == labelOrNot)
+                        if (symbolEntry.symbol == labelOrNot)
                         {
                             inTable = true;
                             continue;
@@ -144,10 +121,9 @@ namespace Hacksemmbler
                     }
                     if (!inTable)
                     {
-                        SymbolEntry thisSymbol = new SymbolEntry();
-                        thisSymbol.SetID(GetLabel(labelOrNot));
-                        thisSymbol.SetAddress(symbolOffset);
-                        thisSymbol.IsCode(true);
+                        CodeSymbol thisSymbol = new CodeSymbol();
+                        thisSymbol.symbol = GetLabel(labelOrNot);
+                        thisSymbol.location = symbolOffset;
                         symbolTable.Add(thisSymbol);
                     }
                 }
@@ -205,7 +181,7 @@ namespace Hacksemmbler
         }
 
         // Generate symbolTable debug output.
-        private static void DebugSymbols(List<string> debugLog, List<SymbolEntry> symbolTable, string thisName, bool outToFile)
+        private static void DebugSymbols(List<string> debugLog, List<CodeSymbol> symbolTable, string thisName, bool outToFile)
         {
             if (outToFile)
             {
@@ -213,11 +189,10 @@ namespace Hacksemmbler
                 List<string> thisTable = new List<string>();
                 foreach(var symbolEntry in symbolTable)
                 {
-                    var thisID = symbolEntry.GetID();
-                    var thisAddress = symbolEntry.GetAddress();
-                    var isData = symbolEntry.IsData();
+                    var thisSymbol = symbolEntry.symbol;
+                    var thisAddress = symbolEntry.location;
 
-                    thisTable.Add($"{thisAddress}\t{isData:is Data}\t{thisID}");           
+                    thisTable.Add($"{thisAddress}\t{thisSymbol}");           
                 }
                 File.WriteAllText(outName, ListAsString(thisTable), System.Text.Encoding.Unicode);
             }
@@ -225,7 +200,7 @@ namespace Hacksemmbler
 
         // Wrapper for encoding operation, to help keep Main tidy.
         private static List<string> DoEncode(List<string> instructionList, List<string> debugLog, 
-                                             ref int nextOpenRegister, List<SymbolEntry> symbolTable)
+                                             ref int nextOpenRegister, List<CodeSymbol> symbolTable)
         {
             List<String> encodedInstructions = new List<String>();
             int offset = 0;
@@ -291,11 +266,11 @@ namespace Hacksemmbler
             String comp = GetComp(destComp);
             cInst.dst = EncodeDest(dest);
             cInst.cmp = EncodeComp(comp);
-            if (!encodeHeader)
+            if (!logHeaderLogged)
             {
                 debugLog.Add($"Inst\tDest\tComp\tJump");
                 debugLog.Add($"----\t----\t----\t----");
-                encodeHeader = true;
+                logHeaderLogged = true;
             }
             debugLog.Add($"{instruction}\t{dest}\t{comp}\t{jump}\t111  {cInst.cmp}  {cInst.dst}  {cInst.jmp}");
             encodedDirective = "111" + cInst.cmp + cInst.dst + cInst.jmp;
@@ -303,7 +278,7 @@ namespace Hacksemmbler
         }
 
         // Encode @-instructions and C-instructions.
-        private static string EncodeDirective(List<string> debugLog, ref int nextOpenRegister, List<SymbolEntry> symbolTable,
+        private static string EncodeDirective(List<string> debugLog, ref int nextOpenRegister, List<CodeSymbol> symbolTable,
                                               int offset, string instruction)
         {
             List<string> fileLog = new List<string>();
@@ -328,12 +303,11 @@ namespace Hacksemmbler
         }
 
         // Return a SymboLEntry with the supplied values.
-        private static SymbolEntry EnterSymbol(string name, int address, bool isCode)
+        private static CodeSymbol EnterSymbol(string name, int address)
         {
-            SymbolEntry se = new SymbolEntry();
-            se.SetID(name);
-            se.SetAddress(address);
-            se.IsCode(isCode);
+            CodeSymbol se = new CodeSymbol();
+            se.symbol = name;
+            se.location = address;
             return se;
         }
 
@@ -385,13 +359,13 @@ namespace Hacksemmbler
 
         // For batch processing, re-init before each input file: Lists, tables, debug & netOpenRegister...
         private static void InitEncode(out int nextOpenRegister, out List<string> instructionList, out bool encodeHeader,
-                                       out List<SymbolEntry> symbolTable, out List<string> outDebug)
+                                       out List<CodeSymbol> symbolTable, out List<string> outDebug)
         {
             encodeHeader = false;
             instructionList = new List<String>();
             nextOpenRegister = 16;
             outDebug = new List<String>();
-            symbolTable = new List<SymbolEntry>();
+            symbolTable = new List<CodeSymbol>();
             symbolTable = PredefineSymbols(symbolTable);
         }
 
@@ -402,7 +376,7 @@ namespace Hacksemmbler
         }
 
         // Parse @variables, link into symbol table.
-        private static int LinkVariables(List<string> instructionList, List<string> debugLog, int nextOpenRegister, List<SymbolEntry> symbolTable)
+        private static int LinkVariables(List<string> instructionList, List<string> debugLog, int nextOpenRegister, List<CodeSymbol> symbolTable)
         {
             for (int i = 0; i < instructionList.Count; i++)
             {
@@ -418,10 +392,10 @@ namespace Hacksemmbler
                         int thisAddress;
                         foreach (var symbolEntry in symbolTable)
                         {
-                            if (symbolEntry.GetID() == labelOrNot)
+                            if (symbolEntry.symbol == labelOrNot)
                             {
                                 inTable = true;
-                                thisAddress = symbolEntry.GetAddress();
+                                thisAddress = symbolEntry.location;
                                 Console.WriteLine($"LOOKUP: {labelOrNot}\t{thisAddress}");
                                 instructionList[i] = $"@{thisAddress}";
                                 continue;
@@ -433,11 +407,10 @@ namespace Hacksemmbler
                         }
                         else if (!inTable)
                         {
-                            SymbolEntry thisSymbol = new SymbolEntry();
+                            CodeSymbol thisSymbol = new CodeSymbol();
                             Console.WriteLine($"Pass 2 VAR: {labelOrNot}\t{nextOpenRegister}");
-                            thisSymbol.SetID(labelOrNot);
-                            thisSymbol.SetAddress(nextOpenRegister);
-                            thisSymbol.IsCode(false);
+                            thisSymbol.symbol = labelOrNot;
+                            thisSymbol.location = nextOpenRegister;
                             symbolTable.Add(thisSymbol);
                             debugLog.Add($"variable: {labelOrNot}\t{nextOpenRegister}");
                             nextOpenRegister++;
@@ -491,7 +464,7 @@ namespace Hacksemmbler
         }
 
         // Parse @variables into absolute references.
-        private static void ParseVariables(List<string> instructionList, List<SymbolEntry> symbolTable)
+        private static void ParseVariables(List<string> instructionList, List<CodeSymbol> symbolTable)
         {
             for (int i = 0; i < instructionList.Count; i++)
             {
@@ -506,9 +479,9 @@ namespace Hacksemmbler
                     {
                         foreach (var symbolEntry in symbolTable)
                         {
-                            if (symbolEntry.GetID() == labelOrNot)
+                            if (symbolEntry.symbol == labelOrNot)
                             {
-                                addressAsInteger = symbolEntry.GetAddress();
+                                addressAsInteger = symbolEntry.location;
                                 instructionList[i] = $"@{addressAsInteger}";
                                 continue;
                             }
@@ -579,12 +552,12 @@ namespace Hacksemmbler
         }
 
         // Report if symbol exists.
-        private static bool SymbolInTable(string labelOrNot, List<SymbolEntry> symbolTable)
+        private static bool SymbolInTable(string labelOrNot, List<CodeSymbol> symbolTable)
         {
             for (int i = 0; i < symbolTable.Count; i++)
             {
-                string thisID = symbolTable[i].GetID();
-                if (labelOrNot == thisID) return true;
+                string thisSymbol = symbolTable[i].symbol;
+                if (labelOrNot == thisSymbol) return true;
             }
             return false;
         }
@@ -678,31 +651,31 @@ namespace Hacksemmbler
         }
 
         // Populate symbol table with predefined values as per Hack specification.
-        private static List<SymbolEntry> PredefineSymbols(List<SymbolEntry> symTable)
+        private static List<CodeSymbol> PredefineSymbols(List<CodeSymbol> symTable)
         {
-            symTable.Add(EnterSymbol("SP", 0, true));
-            symTable.Add(EnterSymbol("LCL", 1, true));
-            symTable.Add(EnterSymbol("ARG", 2, true));
-            symTable.Add(EnterSymbol("THIS", 3, true));
-            symTable.Add(EnterSymbol("THAT", 4, true));
-            symTable.Add(EnterSymbol("SCREEN", 16384, true));
-            symTable.Add(EnterSymbol("KBD", 24576, true));
-            symTable.Add(EnterSymbol("R0", 0, true));
-            symTable.Add(EnterSymbol("R1", 1, true));
-            symTable.Add(EnterSymbol("R2", 2, true));
-            symTable.Add(EnterSymbol("R3", 3, true));
-            symTable.Add(EnterSymbol("R4", 4, true));
-            symTable.Add(EnterSymbol("R5", 5, true));
-            symTable.Add(EnterSymbol("R6", 6, true));
-            symTable.Add(EnterSymbol("R7", 7, true));
-            symTable.Add(EnterSymbol("R8", 8, true));
-            symTable.Add(EnterSymbol("R9", 9, true));
-            symTable.Add(EnterSymbol("R10", 10, true));
-            symTable.Add(EnterSymbol("R11", 11, true));
-            symTable.Add(EnterSymbol("R12", 12, true));
-            symTable.Add(EnterSymbol("R13", 13, true));
-            symTable.Add(EnterSymbol("R14", 14, true));
-            symTable.Add(EnterSymbol("R15", 15, true));
+            symTable.Add(EnterSymbol("SP", 0));
+            symTable.Add(EnterSymbol("LCL", 1));
+            symTable.Add(EnterSymbol("ARG", 2));
+            symTable.Add(EnterSymbol("THIS", 3));
+            symTable.Add(EnterSymbol("THAT", 4));
+            symTable.Add(EnterSymbol("SCREEN", 16384));
+            symTable.Add(EnterSymbol("KBD", 24576));
+            symTable.Add(EnterSymbol("R0", 0));
+            symTable.Add(EnterSymbol("R1", 1));
+            symTable.Add(EnterSymbol("R2", 2));
+            symTable.Add(EnterSymbol("R3", 3));
+            symTable.Add(EnterSymbol("R4", 4));
+            symTable.Add(EnterSymbol("R5", 5));
+            symTable.Add(EnterSymbol("R6", 6));
+            symTable.Add(EnterSymbol("R7", 7));
+            symTable.Add(EnterSymbol("R8", 8));
+            symTable.Add(EnterSymbol("R9", 9));
+            symTable.Add(EnterSymbol("R10", 10));
+            symTable.Add(EnterSymbol("R11", 11));
+            symTable.Add(EnterSymbol("R12", 12));
+            symTable.Add(EnterSymbol("R13", 13));
+            symTable.Add(EnterSymbol("R14", 14));
+            symTable.Add(EnterSymbol("R15", 15));
             return symTable;
         }
         #endregion
