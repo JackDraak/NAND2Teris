@@ -62,11 +62,11 @@ namespace Hacksemmbler
 
         static void Main(string[] args)
         {
-            // Simple sanity checks, could positively be more robust if extended for a broader audience.
+            // Simple sanity checks, this could positively be more robust if extended for a broader audience.
             if (args.Length == 0 || args[0] == "?" || args[0] == "help" || !LooksLikeValidAsm(args[0])) 
             {
                 PrintUsage();
-                return; // No this doesn't 'return' from the IF, it will exit Main gracefully.
+                return;
             }
 
             // Track which argument [input file] we're processing (this allows for batch-processing).
@@ -84,12 +84,11 @@ namespace Hacksemmbler
                 // (Get rid of whitespace, including blank lines and comments, that's for humans, not machines.)
                 PreParse(args, argument, instructionList);
 
-                // Output parsed instructions for humans.
-                DebugPreParsed($"_{thisProgram}.preparse", instructionList, debugLog);
+                // Output pre-parsed instructions for humans.
+                DebugParsed($"_{thisProgram}.preparse", instructionList, debugLog);
 
-                // On first-pass, build requisite symbol table. 
-                // [look for label declarations, track offset]
-                BuildSymbolTable(instructionList, debugLog, symbolTable);
+                // On first-pass, assign requisite symbol table entries. 
+                AssignSymbols(instructionList, debugLog, symbolTable);
 
                 // Second-pass, link symbol table with variables.
                 // TODO: deal with anaochronisitic return of nextOpenRegister... at this point, we no longer need it
@@ -99,7 +98,7 @@ namespace Hacksemmbler
                 ParseVariables(instructionList, symbolTable);
 
                 // Output pre-encoded but fully parsed instructions, again for humans.
-                DebugPreParsed($"_{thisProgram}.postparse", instructionList, debugLog);
+                DebugParsed($"_{thisProgram}.postparse", instructionList, debugLog);
 
                 // Parse and encode instructionList for machines* which are Hack-compliant. 
                 // TODO: deal with anaochronisitic use of nextOpenRegister... at this point, we no longer need it [thanks to "pass three"]
@@ -118,14 +117,13 @@ namespace Hacksemmbler
                 argument = ContinueOrExit(args, argument, programName);
             }
         }
-
         #region Internal Methods
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
         // \\ // \\  Internal methods // \\ // \\ 
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
 
-        // Setup symbolTable from assembly instructionList. First pass, assign symbols to symbol table.
-        private static void BuildSymbolTable(List<string> instructionList, List<string> debugLog,  List<SymbolEntry> symbolTable)
+        // Setup symbolTable from assembly instructionList. First pass, assign symbols to symbol table by offset.
+        private static void AssignSymbols(List<string> instructionList, List<string> debugLog,  List<SymbolEntry> symbolTable)
         {
             int symbolOffset = 0;
             bool isSymbol = false;
@@ -146,7 +144,6 @@ namespace Hacksemmbler
                     }
                     if (!inTable)
                     {
-                        // Strip parens, add label to table.
                         SymbolEntry thisSymbol = new SymbolEntry();
                         thisSymbol.SetID(GetLabel(labelOrNot));
                         thisSymbol.SetAddress(symbolOffset);
@@ -154,8 +151,8 @@ namespace Hacksemmbler
                         symbolTable.Add(thisSymbol);
                     }
                 }
-                if (!isSymbol) symbolOffset++; // NB
-                isSymbol = false; // NB, amazing how helpful this line was/is.
+                if (!isSymbol) symbolOffset++; 
+                isSymbol = false;
             }
         }
 
@@ -163,7 +160,10 @@ namespace Hacksemmbler
         private static string CleanAddress(string strIn)
         {
             try { return Regex.Replace(strIn, @"@", "", RegexOptions.None, TimeSpan.FromSeconds(0.3)); }
-            catch (RegexMatchTimeoutException) { return String.Empty; }
+            catch (RegexMatchTimeoutException) {
+                Console.WriteLine($"FAIL: CleanAddress({strIn}) exception");
+                return String.Empty;
+            }
         }
 
         // Called after each input file is processed; eventually this will exit with a -1, 0, or 1 perhaps.
@@ -177,7 +177,7 @@ namespace Hacksemmbler
         }
 
         // Generate parsed-instruction-list debug output.
-        private static void DebugPreParsed(String thisName, List<string> thisList, List<string> debugLog)
+        private static void DebugParsed(String thisName, List<string> thisList, List<string> debugLog)
         {
             bool header = false;
             int localOffset = 0;
@@ -187,8 +187,8 @@ namespace Hacksemmbler
                 if (!header)
                 {
                     header = true;
-                    fileOut.Add($"Line#\tPre-Parsed Instruction Set");
-                    fileOut.Add($"-----\t--------------------------");
+                    fileOut.Add($"Line#\tParsed Instruction Set");
+                    fileOut.Add($"-----\t----------------------");
                 }
 
                 if (LineIsSymbolReference(thisList[i]))
@@ -201,7 +201,6 @@ namespace Hacksemmbler
                     localOffset++;
                 }
             }
-            //File.Delete(thisName);
             File.WriteAllText(thisName, ListAsString(fileOut), System.Text.Encoding.Unicode);
         }
 
@@ -211,7 +210,6 @@ namespace Hacksemmbler
             if (outToFile)
             {
                 String outName = $"_{thisName}.symbolTable";
-                //File.Delete(outName);
                 List<string> thisTable = new List<string>();
                 foreach(var symbolEntry in symbolTable)
                 {
@@ -221,13 +219,11 @@ namespace Hacksemmbler
 
                     thisTable.Add($"{thisAddress}\t{isData:is Data}\t{thisID}");           
                 }
-                //thisTable.Sort();
                 File.WriteAllText(outName, ListAsString(thisTable), System.Text.Encoding.Unicode);
             }
         }
 
         // Wrapper for encoding operation, to help keep Main tidy.
-        // TODO tidy-up this function.
         private static List<string> DoEncode(List<string> instructionList, List<string> debugLog, 
                                              ref int nextOpenRegister, List<SymbolEntry> symbolTable)
         {
@@ -237,71 +233,35 @@ namespace Hacksemmbler
             {
                 if (instruction.Length > 0 && !LineIsSymbolReference(instruction))
                 {
-                    // Convert @-instructions and C-instructions to hack machine language encoding.
                     encodedInstructions.Add(EncodeDirective(debugLog, ref nextOpenRegister, symbolTable, offset, instruction));
                     offset++;
-                }
-                else if (!LineIsSymbolReference(instruction))
-                {
-                    // Handle symbols. // should be mostly handled by now, except for resolution.
-                    String labelOrNot = CleanAddress(instruction);
-                    int addressAsInteger;
-                    bool success = int.TryParse(labelOrNot, out addressAsInteger);
-                    if (!success)
-                    {
-                        bool inTable = false;
-                        int thisAddress = 0;
-                        foreach (var symbolEntry in symbolTable)
-                        {
-                            if (symbolEntry.GetID() == labelOrNot)
-                            {
-                                thisAddress = symbolEntry.GetAddress();
-                                inTable = true;
-                                continue;
-                            }
-                        }
-                        if (!inTable)
-                        {
-                            // is this still occuring? 
-                            Console.WriteLine("DoEncode() hit address exception");
-                        }
-                        else
-                        {
-
-                        }
-                    }
                 }
             }
             return encodedInstructions;
         }
 
-        // Encode binary address from decimal address.
+        // Encode 16-bit binary address from decimal address.
         private static string Encode16BitAddress(string address)
         {
             int addressAsInteger;
             bool success = int.TryParse(address, out addressAsInteger);
             if (!success)
             {
-                Console.WriteLine("FAIL: convert address to integer error: Encode16BitAddress");
+                Console.WriteLine($"FAIL: Encode16BitAddress({address})");
             }
             int place = 0;
             int remainder = 0;
             bool resolved = false;
             String binaryAddress = " ";
             int addressToConvert = addressAsInteger;
-            // Employing "divide by 2" technique [recursive: modulo to next significant bit, until zero].
             while (!resolved)
             {
                 Math.DivRem(addressToConvert, 2, out remainder);
                 addressToConvert = addressToConvert / 2;
                 binaryAddress = Prepend(binaryAddress, remainder.ToString());
                 place++;
-                // Truncate out of range numbers (they're likely to produce unexpexcted results with bad 
-                // references, in any case, but this will prevent such from masquerading as C-instructions).
                 if (addressToConvert == 0 | place == 15) resolved = true;
             }
-
-            // Pad any remaining bits with zeros.
             while (place < 16)
             {
                 binaryAddress = Prepend(binaryAddress, "0");
@@ -377,42 +337,6 @@ namespace Hacksemmbler
             return se;
         }
 
-        // Convert symbol or assign label stuff. // Depreciated?
-        private static void GetSymbolOrUpdateTable(List<string> debugLog, ref int nextOpenRegister, List<SymbolEntry> symbolTable, 
-                                                   int offset, List<string> fileLog, ref string labelOrNot)
-        {
-            bool inTable = false;
-            int thisAddress = 0;
-            foreach (var symbolEntry in symbolTable)
-            {
-                if (symbolEntry.GetID() == labelOrNot)
-                {
-                    thisAddress = symbolEntry.GetAddress();
-                    inTable = true;
-                    continue;
-                }
-            }
-            if (inTable)
-            {
-                string logString = $"({offset})\tConversion:\t{labelOrNot}={thisAddress}";
-                debugLog.Add(logString);
-                fileLog.Add(logString);
-            }
-            else
-            {
-                Console.WriteLine("ERROR shouldnt be using update functionality here any more: GetSymbolOrUpdate");
-                SymbolEntry thisSymbol = new SymbolEntry();
-                thisSymbol.SetID(labelOrNot);
-                thisSymbol.SetAddress(nextOpenRegister);
-                thisSymbol.IsCode(true);
-                symbolTable.Add(thisSymbol);
-                string logString = $"({offset})\tNew label:\t{labelOrNot}={nextOpenRegister}";
-                debugLog.Add(logString);
-                fileLog.Add(logString);
-                nextOpenRegister++;
-            }
-        }
-
         // Isolate & return computation directive.
         private static string GetComp(string strIn)
         {
@@ -477,7 +401,7 @@ namespace Hacksemmbler
             return strIn.StartsWith("(") && strIn.EndsWith(")");
         }
 
-        // Parse @variables, add into symbol table.
+        // Parse @variables, link into symbol table.
         private static int LinkVariables(List<string> instructionList, List<string> debugLog, int nextOpenRegister, List<SymbolEntry> symbolTable)
         {
             for (int i = 0; i < instructionList.Count; i++)
@@ -541,42 +465,7 @@ namespace Hacksemmbler
             }
         }
 
-        // Convert a List<int> into a comma-delimited string for output.
-        private static string ListOfValues(List<int> listIn)
-        {
-            using (StringWriter streamOut = new StringWriter())
-            {
-                int thisVal;
-                int i = 0;
-                while (i < listIn.Count)
-                {
-                    thisVal = listIn[i];
-                    streamOut.Write(thisVal + ", ");
-                    i++;
-                }
-                return streamOut.ToString();
-            }
-        }
-
-        // Convert a List<string> into a comma-delimited string for output.
-        private static string ListOfValues(List<string> listIn)
-        {
-            using (StringWriter streamOut = new StringWriter())
-            {
-                string thisVal;
-                int i = 0;
-                while (i < listIn.Count)
-                {
-                    thisVal = listIn[i];
-                    streamOut.Write(thisVal + ", ");
-                    i++;
-                }
-                return streamOut.ToString();
-            }
-        }
-
         // Validate input assembly file(s).
-        // TODO: make this more robust.
         private static bool LooksLikeValidAsm(string strIn)
         {
             var probe = Regex.Match(strIn, @".[aA][sS][mM]");
@@ -589,7 +478,6 @@ namespace Hacksemmbler
         private static void OutputDebug(List<string> debugLog, string inName)
         {
             String debugOut = $"_{inName}.debug";
-            //File.Delete(debugOut);
             File.WriteAllText(debugOut, ListAsString(debugLog), System.Text.Encoding.Unicode);
         }
         
@@ -598,7 +486,6 @@ namespace Hacksemmbler
         {
             String inName = GetName(args[argument]);
             String fileOut = $"{inName}.hack";
-            //File.Delete(fileOut);
             File.WriteAllText(fileOut, ListAsString(encodedInstructions), System.Text.Encoding.ASCII);
             return inName;
         }
@@ -701,9 +588,7 @@ namespace Hacksemmbler
             }
             return false;
         }
-
         #endregion
-
         #region Encoding Tables
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
         // \\ // \\  Encoding tables  // \\ // \\ 
@@ -753,7 +638,6 @@ namespace Hacksemmbler
         }
 
         // Destination-bits encoding lookup table.
-        // TODO: target for simplification... why not handle each bit, (A, D, M), individually?
         private static string EncodeDest(string strIn)
         {
             switch (strIn)
@@ -819,7 +703,6 @@ namespace Hacksemmbler
             symTable.Add(EnterSymbol("R13", 13, true));
             symTable.Add(EnterSymbol("R14", 14, true));
             symTable.Add(EnterSymbol("R15", 15, true));
-
             return symTable;
         }
         #endregion
