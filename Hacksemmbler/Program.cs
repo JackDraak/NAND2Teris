@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace Hacksemmbler
 /*  For project 6 of part I of "From Nand to Tetris", my take on the Hack Assembler: Hacksemmbler
  *  Be warned, my programming is not industrial-strength; I'm just doing this for fun and self-
- *  development. @JackDraak
+ *  development. @JackDraak [this is in dire need of a tidy, but... it finally works!]
  *  
  *  Primary specification reference: http://nand2tetris.org/course.php (topic: assembler)
  *  
@@ -58,21 +58,6 @@ namespace Hacksemmbler
                 address = 0;
                 isData = false;
             }
-
-            public SymbolEntry(string str)
-            {
-                id = str;
-            }
-
-            public SymbolEntry(int num)
-            {
-                address = num;
-            }
-
-            public SymbolEntry(bool torf)
-            {
-                isData = torf;
-            }
         }
 
         static void Main(string[] args)
@@ -105,47 +90,28 @@ namespace Hacksemmbler
                 BuildSymbolTable(instructionList, debugLog, symbolTable);
 
                 // Second-pass, link symbol table with variables.
+                nextOpenRegister = LinkVariables(instructionList, debugLog, nextOpenRegister, symbolTable);
+
+                // Replace variables.
                 for (int i = 0; i < instructionList.Count; i++)
                 {
-                    char test = instructionList[i][0];
+                    String labelOrNot = instructionList[i];
+                    char test = labelOrNot[0];
                     if (test == '@')
                     {
-                        String labelOrNot = CleanAddress(instructionList[i]);
+                        labelOrNot = CleanAddress(labelOrNot);
                         int addressAsInteger;
                         bool success = int.TryParse(labelOrNot, out addressAsInteger);
                         if (!success)
                         {
-                            // must be a symbol or variable, assign variables
-                            bool inTable = false;
-                            int thisAddress;
                             foreach (var symbolEntry in symbolTable)
                             {
                                 if (symbolEntry.GetID() == labelOrNot)
                                 {
-                                    inTable = true;
-                                    thisAddress = symbolEntry.GetAddress();
-                                    Console.WriteLine($"LOOKUP: {labelOrNot}\t{thisAddress}");
-                                    // what happens to thisAddress?
-                                    instructionList[i] = $"@{thisAddress}";
+                                    addressAsInteger = symbolEntry.GetAddress();
+                                    instructionList[i] = $"@{addressAsInteger}";
                                     continue;
                                 }
-                            }
-                            if (!inTable & LineIsSymbolReference(labelOrNot))
-                            {
-                                // symbol, not variable
-                                Console.WriteLine("ERROR how did a symbol get here?");
-                            }
-                            else if (!inTable)
-                            {
-                                SymbolEntry thisSymbol = new SymbolEntry();
-                                Console.WriteLine($"Pass 2 VAR: {labelOrNot}\t{nextOpenRegister}");
-                                thisSymbol.SetID(labelOrNot);
-                                thisSymbol.SetAddress(nextOpenRegister);
-                                thisSymbol.IsCode(false);
-                                symbolTable.Add(thisSymbol);
-                                debugLog.Add($"variable: {labelOrNot}\t{nextOpenRegister}");
-                                //   labelOrNot = nextOpenRegister.ToString();
-                                nextOpenRegister++;
                             }
                         }
                     }
@@ -169,6 +135,57 @@ namespace Hacksemmbler
                 // Chill until user hits enter or return, then exit (or continue batch).
                 argument = ContinueOrExit(args, argument, programName);
             }
+        }
+
+        private static int LinkVariables(List<string> instructionList, List<string> debugLog, int nextOpenRegister, List<SymbolEntry> symbolTable)
+        {
+            for (int i = 0; i < instructionList.Count; i++)
+            {
+                char test = instructionList[i][0];
+                if (test == '@')
+                {
+                    String labelOrNot = CleanAddress(instructionList[i]);
+                    int addressAsInteger;
+                    bool success = int.TryParse(labelOrNot, out addressAsInteger);
+                    if (!success)
+                    {
+                        // must be a symbol or variable, assign variables
+                        bool inTable = false;
+                        int thisAddress;
+                        foreach (var symbolEntry in symbolTable)
+                        {
+                            if (symbolEntry.GetID() == labelOrNot)
+                            {
+                                inTable = true;
+                                thisAddress = symbolEntry.GetAddress();
+                                Console.WriteLine($"LOOKUP: {labelOrNot}\t{thisAddress}");
+                                // what happens to thisAddress?
+                                instructionList[i] = $"@{thisAddress}";
+                                continue;
+                            }
+                        }
+                        if (!inTable & LineIsSymbolReference(labelOrNot))
+                        {
+                            // symbol, not variable
+                            Console.WriteLine("ERROR how did a symbol get here?");
+                        }
+                        else if (!inTable)
+                        {
+                            SymbolEntry thisSymbol = new SymbolEntry();
+                            Console.WriteLine($"Pass 2 VAR: {labelOrNot}\t{nextOpenRegister}");
+                            thisSymbol.SetID(labelOrNot);
+                            thisSymbol.SetAddress(nextOpenRegister);
+                            thisSymbol.IsCode(false);
+                            symbolTable.Add(thisSymbol);
+                            debugLog.Add($"variable: {labelOrNot}\t{nextOpenRegister}");
+                            //   labelOrNot = nextOpenRegister.ToString();
+                            nextOpenRegister++;
+                        }
+                    }
+                }
+            }
+
+            return nextOpenRegister;
         }
 
         #region Internal Methods
@@ -204,7 +221,7 @@ namespace Hacksemmbler
                         thisSymbol.SetAddress(symbolOffset);
                         thisSymbol.IsCode(true);
                         symbolTable.Add(thisSymbol);
-                        instructionList.RemoveAt(i); // maybe wait and remove lines at the end, eh?
+                        //instructionList.RemoveAt(i); // maybe wait and remove lines at the end, eh? or maybe just ignore them later?!?
 
                     }
                 }
@@ -307,7 +324,7 @@ namespace Hacksemmbler
                     encodedInstructions.Add(EncodeDirective(debugLog, ref nextOpenRegister, symbolTable, offset, instruction));
                     offset++;
                 }
-                else
+                else if (!LineIsSymbolReference(instruction))
                 {
                     // Handle symbols. // should be mostly handled by now, except for resolution.
                     String labelOrNot = CleanAddress(instruction);
@@ -432,7 +449,15 @@ namespace Hacksemmbler
                 bool success = int.TryParse(address, out addressAsInteger);
                 if (!success)
                 {
-                    GetSymbolOrUpdateTable(debugLog, ref nextOpenRegister, symbolTable, offset, fileLog, ref address);
+                    Console.WriteLine($"PRELOOKUP: {address}");
+                    //GetSymbolOrUpdateTable(debugLog, ref nextOpenRegister, symbolTable, offset, fileLog, ref address);
+
+
+
+
+                    Console.WriteLine($"POSTLOOKUP: {address}");
+                    // TODO NOW
+
                 }
                 encodedDirective = Encode16BitAddress(address);
             }
@@ -477,6 +502,7 @@ namespace Hacksemmbler
             }
             else
             {
+                Console.WriteLine("ERROR shouldnt be using update functionality here any more: GetSymbolOrUpdate");
                 SymbolEntry thisSymbol = new SymbolEntry();
                 thisSymbol.SetID(labelOrNot);
                 thisSymbol.SetAddress(nextOpenRegister);
