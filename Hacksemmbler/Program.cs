@@ -39,7 +39,7 @@ namespace Hacksemmbler
         static void Main(string[] args)
         {
             // Simple sanity checks, this could positively be more robust if extended for a broader audience.
-            if (args.Length == 0 || args[0] == "?" || args[0] == "help" || !LooksLikeValidAsm(args[0])) 
+            if (args.Length == 0 || args[0] == "?" || args[0] == "help" || !LooksLikeValidAsm(args[0]))
             {
                 PrintUsage();
                 return;
@@ -47,7 +47,7 @@ namespace Hacksemmbler
 
             // Track which argument [input file] we're processing (this allows for batch-processing).
             int argument = 0;
-            while(argument < args.Length)
+            while (argument < args.Length)
             {
                 // Initialize setup for each input-file in the batch.
                 List<string> instructionList, debugLog;
@@ -100,7 +100,7 @@ namespace Hacksemmbler
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
 
         // Setup symbolTable from assembly instructionList. First pass, assign symbols to symbol table indexed by offset.
-        private static void AssignSymbols(List<string> instructionList, List<string> debugLog,  List<CodeSymbol> symbolTable)
+        private static void AssignSymbols(List<string> instructionList, List<string> debugLog, List<CodeSymbol> symbolTable)
         {
             int symbolOffset = 0;
             bool isSymbol = false;
@@ -127,7 +127,7 @@ namespace Hacksemmbler
                         symbolTable.Add(thisSymbol);
                     }
                 }
-                if (!isSymbol) symbolOffset++; 
+                if (!isSymbol) symbolOffset++;
                 isSymbol = false;
             }
         }
@@ -136,7 +136,8 @@ namespace Hacksemmbler
         private static string CleanAddress(string strIn)
         {
             try { return Regex.Replace(strIn, @"@", "", RegexOptions.None, TimeSpan.FromSeconds(0.3)); }
-            catch (RegexMatchTimeoutException) {
+            catch (RegexMatchTimeoutException)
+            {
                 Console.WriteLine($"FAIL: CleanAddress({strIn}) exception");
                 return String.Empty;
             }
@@ -187,19 +188,19 @@ namespace Hacksemmbler
             {
                 String outName = $"_{thisName}.symbolTable";
                 List<string> thisTable = new List<string>();
-                foreach(var symbolEntry in symbolTable)
+                foreach (var symbolEntry in symbolTable)
                 {
                     var thisSymbol = symbolEntry.symbol;
                     var thisAddress = symbolEntry.location;
 
-                    thisTable.Add($"{thisAddress}\t{thisSymbol}");           
+                    thisTable.Add($"{thisAddress}\t{thisSymbol}");
                 }
                 File.WriteAllText(outName, ListAsString(thisTable), System.Text.Encoding.Unicode);
             }
         }
 
         // Wrapper for encoding operation, to help keep Main tidy.
-        private static List<string> DoEncode(List<string> instructionList, List<string> debugLog, 
+        private static List<string> DoEncode(List<string> instructionList, List<string> debugLog,
                                              ref int nextOpenRegister, List<CodeSymbol> symbolTable)
         {
             List<String> encodedInstructions = new List<String>();
@@ -325,7 +326,7 @@ namespace Hacksemmbler
         {
             int delimiter = strIn.IndexOf("=");
             if (delimiter > 0) return strIn.Substring(0, delimiter);
-            else return ""; 
+            else return "";
         }
 
         // Isolate & return jump directive.
@@ -438,7 +439,7 @@ namespace Hacksemmbler
             }
         }
 
-        // Validate input assembly file(s).
+        // "Validate" input assembly file(s). Not much of a check, not at all robust.
         private static bool LooksLikeValidAsm(string strIn)
         {
             var probe = Regex.Match(strIn, @".[aA][sS][mM]");
@@ -453,7 +454,7 @@ namespace Hacksemmbler
             String debugOut = $"_{inName}.debug";
             File.WriteAllText(debugOut, ListAsString(debugLog), System.Text.Encoding.Unicode);
         }
-        
+
         // Output machine-encoded program.
         private static string OutputProgram(string[] args, int argument, List<string> encodedInstructions)
         {
@@ -562,6 +563,7 @@ namespace Hacksemmbler
             return false;
         }
         #endregion
+
         #region Encoding Tables
         // \\ // \\ // \\ // \\ // \\ // \\ // \\ 
         // \\ // \\  Encoding tables  // \\ // \\ 
@@ -613,31 +615,19 @@ namespace Hacksemmbler
         // Destination-bits encoding lookup table.
         private static string EncodeDest(string strIn)
         {
-            switch (strIn)
+            using (StringWriter streamOut = new StringWriter())
             {
-                case "M":   return "001";
-                case "D":   return "010";
-                case "MD":  return "011";
-                case "DM":  return "011";
-                case "A":   return "100";
-                case "AM":  return "101";
-                case "AD":  return "110";
-                case "MA":  return "101";
-                case "DA":  return "110";
-                case "AMD": return "111";
-                case "ADM": return "111";
-                case "DAM": return "111";
-                case "DMA": return "111";
-                case "MDA": return "111";
-                case "MAD": return "111";
-                default:    return "000";
+                if (strIn.Contains('A')) streamOut.Write(1); else streamOut.Write(0);
+                if (strIn.Contains('D')) streamOut.Write(1); else streamOut.Write(0);
+                if (strIn.Contains('M')) streamOut.Write(1); else streamOut.Write(0);
+                return streamOut.ToString();
             }
         }
 
         // Jump-bits encoding lookup table.
         private static string EncodeJump(string strIn)
         {
-            switch(strIn)
+            switch (strIn)
             {
                 case "JGT": return "001";
                 case "JEQ": return "010";
