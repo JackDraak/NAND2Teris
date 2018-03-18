@@ -121,10 +121,7 @@ namespace Hacksemmbler
                     }
                     if (!inTable)
                     {
-                        CodeSymbol thisSymbol = new CodeSymbol();
-                        thisSymbol.symbol = GetLabel(labelOrNot);
-                        thisSymbol.location = symbolOffset;
-                        symbolTable.Add(thisSymbol);
+                        symbolTable.Add(GenerateSymbol(GetLabel(labelOrNot), symbolOffset));
                     }
                 }
                 if (!isSymbol) symbolOffset++;
@@ -251,8 +248,8 @@ namespace Hacksemmbler
         {
             string encodedDirective;
             C_code cInst;
-            cInst.cmp = "acccccc";
-            cInst.dst = "ddd";
+            cInst.cmp = "";
+            cInst.dst = "";
             cInst.jmp = "000";
 
             String[] splitstruction = Regex.Split(instruction, @";(...)");
@@ -292,7 +289,8 @@ namespace Hacksemmbler
                 bool success = int.TryParse(address, out addressAsInteger);
                 if (!success)
                 {
-
+                    Console.WriteLine($"UNRESOLVED ADDRESS: EncodeDirective({instruction})");
+                    debugLog.Add($"UNRESOLVED ADDRESS: EncodeDirective({instruction})"); ;
                 }
                 encodedDirective = Encode16BitAddress(address);
             }
@@ -303,38 +301,38 @@ namespace Hacksemmbler
             return encodedDirective;
         }
 
-        // Return a SymboLEntry with the supplied values.
-        private static CodeSymbol EnterSymbol(string name, int address)
+        // Return a CodeSymbol with the supplied values.
+        private static CodeSymbol GenerateSymbol(string name, int address)
         {
-            CodeSymbol se = new CodeSymbol();
-            se.symbol = name;
-            se.location = address;
-            return se;
+            CodeSymbol thisSymbol = new CodeSymbol();
+            thisSymbol.symbol = name;
+            thisSymbol.location = address;
+            return thisSymbol;
         }
 
         // Isolate & return computation directive.
         private static string GetComp(string strIn)
         {
             int l = strIn.Length;
-            int delimiter = strIn.IndexOf("=");
-            if (delimiter >= 0) return StripEq(strIn.Substring(delimiter, l - delimiter));
+            int delimiterIndex = strIn.IndexOf("=");
+            if (delimiterIndex >= 0) return StripEq(strIn.Substring(delimiterIndex, l - delimiterIndex));
             return StripEq(strIn);
         }
 
         // Isolate & return destination directive.
         private static string GetDest(string strIn)
         {
-            int delimiter = strIn.IndexOf("=");
-            if (delimiter > 0) return strIn.Substring(0, delimiter);
+            int delimiterIndex = strIn.IndexOf("=");
+            if (delimiterIndex > 0) return strIn.Substring(0, delimiterIndex);
             else return "";
         }
 
         // Isolate & return jump directive.
         private static string GetJump(string strIn)
         {
-            int delimiter = strIn.IndexOf(";");
-            if (delimiter == 0) return strIn;
-            if (delimiter > 0) return strIn.Substring(0, delimiter);
+            int delimiterIndex = strIn.IndexOf(";");
+            if (delimiterIndex == 0) return strIn;
+            if (delimiterIndex > 0) return strIn.Substring(0, delimiterIndex);
             return strIn;
         }
 
@@ -347,15 +345,15 @@ namespace Hacksemmbler
         // Isolate & return program name from string.
         private static string GetName(string strIn)
         {
-            int delimiter = strIn.IndexOf(".");
-            return strIn.Substring(0, delimiter);
+            int delimiterIndex = strIn.IndexOf(".");
+            return strIn.Substring(0, delimiterIndex);
         }
 
         // Return the name of the selected program in the que.
         private static string GetProgramName(string[] args, int argument)
         {
-            String inName = GetName(args[argument]);
-            return inName;
+            String thisName = GetName(args[argument]);
+            return thisName;
         }
 
         // For batch processing, re-init before each input file: Lists, tables, debug & netOpenRegister...
@@ -397,23 +395,19 @@ namespace Hacksemmbler
                             {
                                 inTable = true;
                                 thisAddress = symbolEntry.location;
-                                Console.WriteLine($"LOOKUP: {labelOrNot}\t{thisAddress}");
+                                //debugLog.Add($"LOOKUP: {labelOrNot}\t{thisAddress}");
                                 instructionList[i] = $"@{thisAddress}";
                                 continue;
                             }
                         }
                         if (!inTable & LineIsSymbolReference(labelOrNot))
                         {
-                            Console.WriteLine("ERROR how did a symbol get here?");
+                            Console.WriteLine($"ERROR LinkVariables({labelOrNot} - symbol reference not found in table)");
                         }
                         else if (!inTable)
                         {
-                            CodeSymbol thisSymbol = new CodeSymbol();
-                            Console.WriteLine($"Pass 2 VAR: {labelOrNot}\t{nextOpenRegister}");
-                            thisSymbol.symbol = labelOrNot;
-                            thisSymbol.location = nextOpenRegister;
-                            symbolTable.Add(thisSymbol);
-                            debugLog.Add($"variable: {labelOrNot}\t{nextOpenRegister}");
+                            symbolTable.Add(GenerateSymbol(labelOrNot, nextOpenRegister));
+                            //debugLog.Add($"VARIABLE: {labelOrNot}\t{nextOpenRegister}");
                             nextOpenRegister++;
                         }
                     }
@@ -427,12 +421,12 @@ namespace Hacksemmbler
         {
             using (StringWriter streamOut = new StringWriter())
             {
-                string line;
+                string thisLine;
                 int i = 0;
                 while (i < listIn.Count)
                 {
-                    line = listIn[i];
-                    streamOut.Write(line + "\r\n");
+                    thisLine = listIn[i];
+                    streamOut.Write(thisLine + "\r\n");
                     i++;
                 }
                 return streamOut.ToString();
@@ -449,19 +443,19 @@ namespace Hacksemmbler
         }
 
         // Output debugging information.
-        private static void OutputDebug(List<string> debugLog, string inName)
+        private static void OutputDebug(List<string> debugLog, string thisName)
         {
-            String debugOut = $"_{inName}.debug";
+            String debugOut = $"_{thisName}.debug";
             File.WriteAllText(debugOut, ListAsString(debugLog), System.Text.Encoding.Unicode);
         }
 
         // Output machine-encoded program.
         private static string OutputProgram(string[] args, int argument, List<string> encodedInstructions)
         {
-            String inName = GetName(args[argument]);
-            String fileOut = $"{inName}.hack";
+            String thisName = GetName(args[argument]);
+            String fileOut = $"{thisName}.hack";
             File.WriteAllText(fileOut, ListAsString(encodedInstructions), System.Text.Encoding.ASCII);
-            return inName;
+            return thisName;
         }
 
         // Parse @variables into absolute references.
@@ -513,11 +507,11 @@ namespace Hacksemmbler
             using (StringWriter streamOut = new StringWriter())
             using (StringReader streamIn = new StringReader(strIn))
             {
-                string line;
-                while ((line = streamIn.ReadLine()) != null)
+                string thisStream;
+                while ((thisStream = streamIn.ReadLine()) != null)
                 {
                     if (!first) streamOut.WriteLine();
-                    streamOut.Write(prefix + line); first = false;
+                    streamOut.Write(prefix + thisStream); first = false;
                 }
                 return streamOut.ToString();
             }
@@ -532,9 +526,9 @@ namespace Hacksemmbler
         // Return string sans comments.
         private static string StripComments(string strIn)
         {
-            int delimiter = strIn.IndexOf("/");
-            if (delimiter == 0) return "";
-            if (delimiter > 0) return strIn.Substring(0, delimiter);
+            int delimiterIndex = strIn.IndexOf("/");
+            if (delimiterIndex == 0) return "";
+            if (delimiterIndex > 0) return strIn.Substring(0, delimiterIndex);
             return strIn;
         }
 
@@ -615,12 +609,12 @@ namespace Hacksemmbler
         // Destination-bits encoding lookup table.
         private static string EncodeDest(string strIn)
         {
-            using (StringWriter streamOut = new StringWriter())
+            using (StringWriter thisStream = new StringWriter())
             {
-                if (strIn.Contains('A')) streamOut.Write(1); else streamOut.Write(0);
-                if (strIn.Contains('D')) streamOut.Write(1); else streamOut.Write(0);
-                if (strIn.Contains('M')) streamOut.Write(1); else streamOut.Write(0);
-                return streamOut.ToString();
+                if (strIn.Contains('A')) thisStream.Write(1); else thisStream.Write(0);
+                if (strIn.Contains('D')) thisStream.Write(1); else thisStream.Write(0);
+                if (strIn.Contains('M')) thisStream.Write(1); else thisStream.Write(0);
+                return thisStream.ToString();
             }
         }
 
@@ -643,29 +637,29 @@ namespace Hacksemmbler
         // Populate symbol table with predefined values as per Hack specification.
         private static List<CodeSymbol> PredefineSymbols(List<CodeSymbol> symTable)
         {
-            symTable.Add(EnterSymbol("SP", 0));
-            symTable.Add(EnterSymbol("LCL", 1));
-            symTable.Add(EnterSymbol("ARG", 2));
-            symTable.Add(EnterSymbol("THIS", 3));
-            symTable.Add(EnterSymbol("THAT", 4));
-            symTable.Add(EnterSymbol("SCREEN", 16384));
-            symTable.Add(EnterSymbol("KBD", 24576));
-            symTable.Add(EnterSymbol("R0", 0));
-            symTable.Add(EnterSymbol("R1", 1));
-            symTable.Add(EnterSymbol("R2", 2));
-            symTable.Add(EnterSymbol("R3", 3));
-            symTable.Add(EnterSymbol("R4", 4));
-            symTable.Add(EnterSymbol("R5", 5));
-            symTable.Add(EnterSymbol("R6", 6));
-            symTable.Add(EnterSymbol("R7", 7));
-            symTable.Add(EnterSymbol("R8", 8));
-            symTable.Add(EnterSymbol("R9", 9));
-            symTable.Add(EnterSymbol("R10", 10));
-            symTable.Add(EnterSymbol("R11", 11));
-            symTable.Add(EnterSymbol("R12", 12));
-            symTable.Add(EnterSymbol("R13", 13));
-            symTable.Add(EnterSymbol("R14", 14));
-            symTable.Add(EnterSymbol("R15", 15));
+            symTable.Add(GenerateSymbol("SP", 0));
+            symTable.Add(GenerateSymbol("LCL", 1));
+            symTable.Add(GenerateSymbol("ARG", 2));
+            symTable.Add(GenerateSymbol("THIS", 3));
+            symTable.Add(GenerateSymbol("THAT", 4));
+            symTable.Add(GenerateSymbol("SCREEN", 16384));
+            symTable.Add(GenerateSymbol("KBD", 24576));
+            symTable.Add(GenerateSymbol("R0", 0));
+            symTable.Add(GenerateSymbol("R1", 1));
+            symTable.Add(GenerateSymbol("R2", 2));
+            symTable.Add(GenerateSymbol("R3", 3));
+            symTable.Add(GenerateSymbol("R4", 4));
+            symTable.Add(GenerateSymbol("R5", 5));
+            symTable.Add(GenerateSymbol("R6", 6));
+            symTable.Add(GenerateSymbol("R7", 7));
+            symTable.Add(GenerateSymbol("R8", 8));
+            symTable.Add(GenerateSymbol("R9", 9));
+            symTable.Add(GenerateSymbol("R10", 10));
+            symTable.Add(GenerateSymbol("R11", 11));
+            symTable.Add(GenerateSymbol("R12", 12));
+            symTable.Add(GenerateSymbol("R13", 13));
+            symTable.Add(GenerateSymbol("R14", 14));
+            symTable.Add(GenerateSymbol("R15", 15));
             return symTable;
         }
         #endregion
