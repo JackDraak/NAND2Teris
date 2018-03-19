@@ -1,0 +1,87 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+		// Decode controller:
+		// I've made a 1-bit "Bus" chip, then a 16-bit version, and used that to make "Splitter". I'm sure I missed 
+		// (or misunderstood) something in Apendix A that would reveal this to be 'busywork', but it does the job.
+		// Only C-instructions need to be decoded:
+		Mux16(b=instruction, sel=instruction[15], out=cin);	// use c-bit to send c-instructions to the splitter (decoder)
+		Splitter16(in=cin, a=jg,b=je,c=jl, d=lm,d=writeM,e=ld,f=la, g=no,h=f,i=ny,j=zy,k=nx,l=zx, m=ambit,p=acbit);
+		// (NOTE: My use of the Mux16 above, I think, shows why I don't need "Splitter", but my brain is a bit melted
+		// after getting this working so I wont state that as a fact. Nevertheless, "Splitter" certainly helps to make
+		// quick sense of the decoder, by using the natural labels for the wires, so I have no plan to alter the design
+		// at this point in time.)
+
+		// ARegister controller:
+		// ARegister must load 'instruction' for @-instructions.
+		// ARegister must load 'aluo' for 'la' bit durring c-instruction cycles.
+		Not(in=acbit, out=nac);								// Invert acbit to trigger @-instruction cycle.
+		Or(a=nac, b=lmar, out=lra);							// Load register a (lra=1) when: nc (a instruction) or lmar (load a).
+		And(a=acbit, b=la, out=lmar);						// Load register a (lmar=1) when: acbit (c instruction) and la (load a).
+		Or(a=lmar, b=lra, out=lramar);						// ARegister load-trigger.
+		Mux16(a=aluo, b=instruction, sel=nac, out=amux);	// Mux from 'b' when a-instruction (otherwise 'a').
+		ARegister(out=arout, out[0..14]=addressM, in=amux, load=lramar);
+		
+		// DRegister controller:
+		// DRegister must lode when ld=true.
+		DRegister(out=drout, in=aluo, load=ld);				// Our DRegister is the most simple part of our CPU.
+
+		// am-bit controller:
+		// when am-bit is on: D&|M operation, when am-bit is off: D&|A operation.
+		Mux16(a=arout, b=inM, sel=ambit, out=amy); // Sending D to x, A|M to y....
+		ALU(out=aluo, zr=zr, ng=ng, x=drout, y=amy, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no);
+		
+		// lm-bit controller:
+		// Somewhat unneeded(?) but I note the .cmp file has xxxxxxxx for most outM. This outputs 0. 
+		Mux16(b=aluo, sel=lm, out=outM);	
+
+		// Jump controller:
+		Not(in=ng, out=nng);					// Invert ng & zr to identify when 'aluo' is positive.
+		Not(in=zr, out=nzr);					// Invert ng & zr to identify when 'aluo' is positive.
+		And(a=nng, b=nzr, out=gand1);			// When neiter negative nor zero, output positive.
+		And(a=gand1, b=jg, out=gand);			// Greater than zero jump.
+		And(a=zr, b=je, out=eand);				// Equal to zero jump.
+		And(a=ng, b=jl, out=land);				// Less than zero jump.
+		Or3Way(out=jmp, a=gand, b=eand, c=land);
+
+		// Program controller:
+		PC(inc=true, load=jmp, in=arout, reset=reset, out[0..14]=pc);	// Always increment unless superceeded by load or reset.
+}

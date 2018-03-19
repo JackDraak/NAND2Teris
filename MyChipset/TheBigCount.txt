@@ -1,0 +1,58 @@
+Mux:
+Nand(4)                1 NANDs
+------------------------------
+Total                  4 NANDs in 4 gates
+
+
+Mux4Way:
+Mux(3)                 4 NANDs
+------------------------------
+Total                 12 NANDs in 3 gates
+
+
+
+HalfAdder:
+Nand(5)                1 NANDs
+------------------------------
+Total                  5 NANDs in 5 gates
+
+
+
+FullAdder:
+Nand(9)                1 NANDs
+------------------------------
+Total                  9 NANDs in 9 gates
+
+
+Add16:
+FullAdder(15)          9 NANDs
+HalfAdder(1)           5 NANDs
+------------------------------
+Total                140 NANDs in 16 gates
+
+
+ALU:
+Add16(1)             140 NANDs
+And16(1)              32 NANDs
+Mux16(6)              64 NANDs
+Not(1)                 1 NANDs
+Not16(3)              16 NANDs
+Or(1)                  3 NANDs
+Or8Way(2)             21 NANDs
+------------------------------
+Total                650 NANDs in 15 gates
+
+
+Or8Way:
+Or(7)                  3 NANDs
+------------------------------
+Total                 21 NANDs in 7 gates
+
+
+PC:
+Inc16(1)             140 NANDs
+Mux16(2)              64 NANDs
+Nand(6)                1 NANDs
+Register(1)          128 NANDs
+------------------------------
+Total                402 NANDs in 10 gates

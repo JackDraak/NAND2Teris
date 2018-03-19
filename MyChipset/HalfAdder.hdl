@@ -13,11 +13,6 @@ CHIP HalfAdder {
         carry;  // Left bit of a + b	| carry = A.B
 
 PARTS:
-// This intuitive design can be optimized with 1 fewer NAND, as I discovered 
-// while working on optimizations for the game: MHRD.
-/*	Xor(a=a, b=b, out=sum);
-	And(a=a, b=b, out=carry); */
-
 // I've used simple wire IDs because it's the easiest way (for me) to draft a chip design
 // on paper and copy it to HDL.  While they do not elucidate the logic at a glance,
 // leaving them 'simple' may facilitate re-drafting it. It's a chip that should 

@@ -16,18 +16,23 @@ CHIP Mux4Way {
 // some optimizations might be apparent, but for now, this works. You can literally see the equation above
 // in the hdl below, however... three +'s, three ORs... eight .'s, eight ANDs... two inversions and two NOT
 // gates.... maybe this is as good as it gets? As it stands, I see nothing extraneous.
+
+// And then I did some reseaerch to see that 3 Mux's can = a 4way Mux, not unlike the DMux branching:
 PARTS:
-	And(a=a, b=e, out=n);
-	And(a=l, b=m, out=e);
-	And(a=b, b=l, out=f);
-	And(a=f, b=sel[0], out=g);
-	And(a=c, b=sel[1], out=h);
-	And(a=h, b=m, out=i);
-	And(a=d, b=sel[1], out=j);
-	And(a=j, b=sel[0], out=k);
-	Not(in=sel[1], out=l);
-	Not(in=sel[0], out=m);
-	Or(a=i, b=k, out=o);
-	Or(a=g, b=o, out=p);
-	Or(a=n, b=p, out=out);
+//	And(a=a, b=e, out=n);
+//	And(a=l, b=m, out=e);
+//	And(a=b, b=l, out=f);
+//	And(a=f, b=sel[0], out=g);
+//	And(a=c, b=sel[1], out=h);
+//	And(a=h, b=m, out=i);
+//	And(a=d, b=sel[1], out=j);
+//	And(a=j, b=sel[0], out=k);
+//	Not(in=sel[1], out=l);
+//	Not(in=sel[0], out=m);
+//	Or(a=i, b=k, out=o);
+//	Or(a=g, b=o, out=p);
+//	Or(a=n, b=p, out=out);
+	Mux(a=a, b=b, out=outab, sel=sel[0]);
+	Mux(a=c, b=d, out=outcd, sel=sel[0]);
+	Mux(a=outab, b=outcd, out=out, sel=sel[1]);
 }

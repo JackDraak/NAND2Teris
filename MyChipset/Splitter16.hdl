@@ -1,0 +1,21 @@
+/**
+ * Maybe I missed how to manage an internal bus... 
+ * I'll have to review other solutions once I get my
+ * CPU working to see how it's been done by others.
+ */
+
+CHIP Splitter16 {
+
+	// Okay this isn't my prettiest work, to be sure.  I'm mostly certain I've missed something about 
+	// using an internal bus, however, so I don't want to put too much effort into it until I get the 
+	// CPU working to spec. (Maybe then I can discover a better way to do the internal bus alltogether.)
+
+    IN in[16];
+	OUT a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p;
+
+PARTS:
+	Bus16(in=in, out[0]=a, out[1]=b, out[2]=c, out[3]=d, 
+		out[4]=e, out[5]=f, out[6]=g, out[7]=h, 
+		out[8]=i, out[9]=j, out[10]=k, out[11]=l, 
+		out[12]=m, out[13]=n, out[14]=o, out[15]=p);
+}

@@ -1,0 +1,5 @@
+DMux4Way(1)           12 NANDs
+Mux4Way16(1)         192 NANDs
+RAM4K(4)            802748 NANDs
+------------------------------
+Total               3211196 NANDs in 6 gates

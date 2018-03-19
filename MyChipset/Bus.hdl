@@ -1,0 +1,14 @@
+/**
+ * Maybe I missed how to manage an internal bus... 
+ * I'll have to review other solutions once I get my
+ * CPU working to see how it's been done by others.
+ */
+
+CHIP Bus {
+
+    IN in;
+	OUT out;
+
+PARTS:
+    And(a=true, b=in, out=out);
+}

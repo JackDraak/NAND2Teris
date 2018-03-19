@@ -1,0 +1,6 @@
+Inc16(1)             140 NANDs
+Mux16(2)              64 NANDs
+Nand(6)                1 NANDs
+Register(1)          128 NANDs
+------------------------------
+Total                402 NANDs in 10 gates

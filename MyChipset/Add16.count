@@ -1,0 +1,4 @@
+FullAdder(15)          9 NANDs
+HalfAdder(1)           5 NANDs
+------------------------------
+Total                140 NANDs in 16 gates

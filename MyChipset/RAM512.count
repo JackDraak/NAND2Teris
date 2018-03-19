@@ -1,0 +1,5 @@
+DMux8Way(1)           28 NANDs
+Mux8Way16(1)         448 NANDs
+RAM64(8)            12476 NANDs
+------------------------------
+Total               100284 NANDs in 10 gates

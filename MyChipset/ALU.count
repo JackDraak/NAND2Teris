@@ -1,0 +1,9 @@
+Add16(1)             140 NANDs
+And16(1)              32 NANDs
+Mux16(6)              64 NANDs
+Not(1)                 1 NANDs
+Not16(3)              16 NANDs
+Or(1)                  3 NANDs
+Or8Way(2)             21 NANDs
+------------------------------
+Total                650 NANDs in 15 gates

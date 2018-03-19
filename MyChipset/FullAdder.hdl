@@ -12,21 +12,8 @@ CHIP FullAdder {
     OUT sum,     // Right bit of a + b + c
         carry;   // Left bit of a + b + c
 
-// The spirit of the course is probably to have you (okay, me) wire
-// two halfadders together here (I actually skipped ahead of the
-// lecture and reading, etc.) but I'd already designed this from 
-// more fundamental gates so here's what I already had ready to go:
 PARTS:
-/*	Xor(a=a, b=b, out=z);
-	Xor(a=z, b=c, out=sum);
-	And(a=c, b=z, out=y);
-	And(a=a, b=b, out=x);
-	Or(a=y, b=x, out=carry);
-// The same chip, but using HA's... but apparently a FA can be made with 9 NANDs...
-  HalfAdder(a=a, b=b, sum=d, carry=e1);
-  HalfAdder(a=c, b=d, sum=sum, carry=e2);
-  Or(a=e1, b=e2, out=carry);
-*/
+
 // So, I drafted a FullAdder on paper, comprised of it's constituent NAND gates
 // and in short order identified 6/15 NAND chips that I should be able to get
 // rid of (assuming I drafted it correctly, etc.) Et viola!
