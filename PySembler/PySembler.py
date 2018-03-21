@@ -6,8 +6,6 @@
 import sys
 
 ## Variables
-args = sys.argv
-args_L = len(args)
 argument = 1
 
 ## Encoding Functions
@@ -75,7 +73,7 @@ def DebugSymbols():
 
 def GetName():
 	delimiter = '.'
-	thisArg = args[argument]
+	thisArg = sys.argv[argument]
 	success = thisArg.find(delimiter)
 	if success >= 1: 
 		progName = thisArg[0:success]
@@ -109,7 +107,7 @@ def PredefineSymbols():
 	return symTable
 
 def Sanity():
-	if args_L <= argument or args[argument] == "help": 
+	if len(sys.argv) <= argument or sys.argv[argument] == "help": 
 		Usage()
 
 def Usage():
@@ -120,15 +118,32 @@ def Usage():
 Sanity()
 symTable = dict()
 nextOpenRegister = 16
+
 # main program loop
-while argument < args_L:
-	
+while argument < len(sys.argv):
+	fullList = []
 	symTable.clear()
 	symTable = PredefineSymbols() 
-	#DebugSymbols()
 	progName = GetName()
-	#if (progName): print (progName)
+	if (progName): print (progName) # debug
+
+	inputFile = open(sys.argv[argument],'r')
+	rawInput = inputFile.readlines()
+	for item in rawInput:
+		#print(item)
+		fullList.append(item)
+
+	for line in fullList:
+		print(line)
+	#print(fullList)
+	#preparsedInput = rawInput.translate(None, ' \t') # remove tabs and spaces [remove blank lines, remove comments]
+	#print(preparsedInput)
+
+
 	"""
+	t = [] # implicit instantiation
+	t = t.append(1)
+	' hello  apple'.translate(None, ' \n\t\r')
 	// Pre-parse input-stream of instructions into a handy-dandy List... let's call it: instructionList.
 	// (Expunge whitespace, including blank lines and comments; that's for humans, not machines.)
 	PreParse(args, argument, instructionList);
@@ -155,4 +170,4 @@ while argument < args_L:
 	"""
 	# end of main loop
 	argument += 1
-	if argument == args_L: break 
+	if argument == len(sys.argv): break 
