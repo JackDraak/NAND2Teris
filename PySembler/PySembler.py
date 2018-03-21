@@ -1,8 +1,13 @@
 #!/usr/bin/env python
-
-# @author jackdraak
 #
+#	@author JackDraak
+#	I'm ostensibly using Python 3 here, fwiw.
 # 
+#	PySembler.py : This small application processes one, or a
+#	batch, of Hack* assembly files to generate Hack machine
+#	language as ASCII output.
+#
+import string
 import sys
 
 ## Variables
@@ -110,6 +115,13 @@ def Sanity():
 	if len(sys.argv) <= argument or sys.argv[argument] == "help": 
 		Usage()
 
+def StripComments(strIn):
+	delimiter = '/'
+	success = strIn.find(delimiter)
+	if success >= 1: 
+		strOut = strIn[0:success]
+		return strOut
+
 def Usage():
 	print ("\nUSAGE: PySembler fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
 
@@ -122,34 +134,36 @@ nextOpenRegister = 16
 # main program loop
 while argument < len(sys.argv):
 	fullList = []
+	truncList = []
 	symTable.clear()
 	symTable = PredefineSymbols() 
 	progName = GetName()
-	if (progName): print (progName) # debug
+	if (progName): print ("Processing: " + progName) # debug
 
+	# read input
+	line = 0
 	inputFile = open(sys.argv[argument],'r')
 	rawInput = inputFile.readlines()
+	# remove comments
 	for item in rawInput:
-		#print(item)
-		fullList.append(item)
+		delimiter = '/'
+		success = item.find(delimiter)
+		if success >= 0: 
+			item = item[0:success] 
+	# remove whitespace (space, tab, return, linefeed)
+		if item:
+			item = item.translate({ord(c): None for c in ' \t\r\n'})
+			if len(item) > 0:
+				fullList.append(item)
+		line += 1
 
-	for line in fullList:
-		print(line)
-	#print(fullList)
-	#preparsedInput = rawInput.translate(None, ' \t') # remove tabs and spaces [remove blank lines, remove comments]
-	#print(preparsedInput)
-
+	print (fullList)
 
 	"""
+	unicode_line = unicode_line.translate({ord(c): None for c in '!@#$'})
 	t = [] # implicit instantiation
 	t = t.append(1)
 	' hello  apple'.translate(None, ' \n\t\r')
-	// Pre-parse input-stream of instructions into a handy-dandy List... let's call it: instructionList.
-	// (Expunge whitespace, including blank lines and comments; that's for humans, not machines.)
-	PreParse(args, argument, instructionList);
-
-	// Output pre-parsed instructions, for humans.
-	DebugParsed($"_{thisProgram}.preparse", instructionList, debugLog);
 
 	// On first-pass, assign requisite symbol table entries. 
 	AssignSymbols(instructionList, debugLog, symbolTable);
