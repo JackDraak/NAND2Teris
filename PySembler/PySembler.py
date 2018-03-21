@@ -125,86 +125,116 @@ def StripComments(strIn):
 def Usage():
 	print ("\nUSAGE: PySembler fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
 
-## Program entry-point
-# initialization
+## Program entry-point:
+# Initialization.
 Sanity()
 symTable = dict()
-nextOpenRegister = 16
 
-# main program loop
+# Main program loop.
 while argument < len(sys.argv):
 	fullList = []
 	symTable.clear()
 	symTable = PredefineSymbols() 
 	progName = GetName()
+	nextOpenRegister = 16
 	if (progName): print ("Processing: " + progName) # debug
 
-	# read input
+	# Read input.
 	inputFile = open(sys.argv[argument],'r')
 	rawInput = inputFile.readlines()
-	# remove comments
+	# Remove comments.
 	for item in rawInput:
 		delimiter = '/'
 		success = item.find(delimiter)
 		if success >= 0: 
 			item = item[0:success] 
-	# remove whitespace (space, tab, return, linefeed)
+	# Remove whitespace (space, tab, return, linefeed).
 		if item:
 			item = item.translate({ord(c): None for c in ' \t\r\n'})
 			if len(item) > 0:
 				fullList.append(item)
 
-	print (fullList) # debug
-
-	# assign symbols to symTable
-	#private static void AssignSymbols(List<string> instructionList, List<string> debugLog, List<CodeSymbol> symbolTable)
+	# Assign symbols to symTable.
 	symbolOffset = 0
 	isSymbol = False
 	for line in fullList:
-		if line[0] == '(' and line[-1] == ')': # if line is symbol
+		# If line is symbol...
+		if line[0] == '(' and line[-1] == ')':
 			isSymbol = True
 			inTable = False
-			for key in symTable: # find line in table?
+			# Try to find symbol in table...
+			for key in symTable:
 				if key == line:
 					inTable = True
 					continue
-			if not inTable: # add new symbols
-				symTable[line] = symbolOffset
+			# Add new symbols.
+			if not inTable:
+				symTable[line[1:-1]] = symbolOffset
+		# Manage offset.
 		if not isSymbol: 
 			symbolOffset += 1
 		isSymbol = False
 
-	DebugSymbols()
+	# Link variables into symbol table.
+	instructionOffset = 0
+	for line in fullList:
+		if line[0] == '@':
+			addressAsInteger = int()
+			address = line[1:]
+			try: 
+				addressAsInteger = int(address)
+				line = "@" + str(addressAsInteger) # TODO update address in fullList here? Why doesn't this work?
+			except:
+				inTable = False
+				for key in symTable:
+					if key == address:
+						address = symTable[key]
+						print("symbol in table " + str(address) + " : " + str(key)) # debug
+						inTable = True
+						line = "@" + str(address) # TODO update address in fullList here? Why doesn't this work?
+						continue	
+						
+				if not inTable: 
+					print("symbol not in table " + str(address) + " : " + str(nextOpenRegister)) # debug
+					symTable[address] = nextOpenRegister
+					line = "@" + str(nextOpenRegister) # TODO update address in fullList here? Why doesn't this work?
+					nextOpenRegister += 1
 
-	"""
-	try:
-		result = simulate(open("myfile"))
-	except SimulationException as sim_exc:
-		print "error parsing stream", sim_exc
-	else:
-		if result:
-			print "result pass"
-		else:
-			print "result fail"
+				if not line[0] == '(':
+					instructionOffset += 1
 
-	symTable["R15"] = 15
-	// On first-pass, assign requisite symbol table entries. 
-	AssignSymbols(instructionList, debugLog, symbolTable);
+	# Encoding section:
+	for line in fullList:
+		# Encode addresses.
+		if line[0] == '@':
+			"""
+			#// Encode 16-bit binary address from decimal address.
+			int addressAsInteger;
+			bool success = int.TryParse(address, out addressAsInteger);
+			if (!success)
+				Console.WriteLine($"FAIL: Encode16BitAddress({address})");
+			int place = 0;
+			int remainder = 0;
+			bool resolved = false;
+			String binaryAddress = " ";
+			int addressToConvert = addressAsInteger;
+			while (!resolved)
+				Math.DivRem(addressToConvert, 2, out remainder);
+				addressToConvert = addressToConvert / 2;
+				binaryAddress = Prepend(binaryAddress, remainder.ToString());
+				place++;
+				if (addressToConvert == 0 | place == 15) resolved = true;
+			while (place < 16)
+				binaryAddress = Prepend(binaryAddress, "0");
+				place++;
+			return StripWhitespace(binaryAddress);
+			"""
+		# Encode instructions.
 
-	// Second-pass, link symbol table with variables.
-	// TODO: deal with anaochronisitic return of nextOpenRegister... at this point, we no longer need it
-	nextOpenRegister = LinkVariables(instructionList, debugLog, nextOpenRegister, symbolTable);
 
-	// "Third-pass", Parse variables into absolute addresses.
-	ParseVariables(instructionList, symbolTable);
+	#DebugSymbols() # debug
+	#print (fullList) # debug
 
-	// Output pre-encoded but fully parsed instructions, again for humans.
-	DebugParsed($"_{thisProgram}.postparse", instructionList, debugLog);
-
-	// Parse and encode instructionList for machines* which are Hack-compliant. 
-	// TODO: deal with anaochronisitic use of nextOpenRegister... at this point, we no longer need it [thanks to "pass three"]
-	List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolTable);
-	"""
-	# end of main loop
+	# End of main loop.
 	argument += 1
 	if argument == len(sys.argv): break 
