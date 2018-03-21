@@ -9,37 +9,8 @@ import sys
 args = sys.argv
 args_L = len(args)
 argument = 1
-symTable = dict()
 
-## Functions
-def Sanity():
-	if args_L <= argument or args[argument] == "help": 
-		Usage()
-
-def Usage():
-	print ("\nUSAGE: PySembler fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
-
-def GetName():
-	delimiter = '.'
-	thisArg = args[argument]
-	success = thisArg.find(delimiter)
-	if success >= 1: 
-		progName = thisArg[0:success]
-		return progName
-
-## Main.c, as it were
-Sanity()
-
-	## main program loop
-while argument < args_L :
-#if argument < args_L : 
-	progName = GetName()
-	if (progName): print (progName)
-	argument += 1
-
-## instructionList, debugLog, symboLTable,
-
-## Encoding
+## Encoding Functions
 def EncodeComp(strIn):
     if strIn == "0":     return "0101010"
     elif strIn == "1":   return "0111111"
@@ -78,16 +49,13 @@ def EncodeComp(strIn):
     return "0000000"
 
 def EncodeDest(strIn):
-	destA = "0"
-	destD = "0"
-	destM = "0"
+	destA = destD = destM = "0"
 	if strIn.Contains("A"): destA = "1" 
 	if strIn.Contains("D"): destD = "1"
 	if strIn.Contains("M"): destM = "1"
 	return str(destA + destD + destM)
 
 def EncodeJump(strIn):
-
     if strIn == "JGT":   return "001"
     elif strIn == "JEQ": return "010"
     elif strIn == "JGE": return "011"
@@ -97,28 +65,94 @@ def EncodeJump(strIn):
     elif strIn == "JMP": return "111"
     return "000"
 
-def PredefineSymbols(symTable):
-    symTable.Add("SP", 0)
-    symTable.Add("LCL", 1)
-    symTable.Add("ARG", 2)
-    symTable.Add("THIS", 3)
-    symTable.Add("THAT", 4)
-    symTable.Add("SCREEN", 16384)
-    symTable.Add("KBD", 24576)
-    symTable.Add("R0", 0)
-    symTable.Add("R1", 1)
-    symTable.Add("R2", 2)
-    symTable.Add("R3", 3)
-    symTable.Add("R4", 4)
-    symTable.Add("R5", 5)
-    symTable.Add("R6", 6)
-    symTable.Add("R7", 7)
-    symTable.Add("R8", 8)
-    symTable.Add("R9", 9)
-    symTable.Add("R10", 10)
-    symTable.Add("R11", 11)
-    symTable.Add("R12", 12)
-    symTable.Add("R13", 13)
-    symTable.Add("R14", 14)
-    symTable.Add("R15", 15)
-    return symTable
+## Other Functions
+def CleanTable(symTable):
+	symTable.clear()
+
+def DebugSymbols():
+	for key in symTable:
+		print("Key: " + str(key) + ", Value: " + str(symTable[key]))
+
+def GetName():
+	delimiter = '.'
+	thisArg = args[argument]
+	success = thisArg.find(delimiter)
+	if success >= 1: 
+		progName = thisArg[0:success]
+		return progName
+
+def PredefineSymbols():
+	symTable = dict()
+	symTable["SP"] = 0
+	symTable["LCL"] = 1
+	symTable["ARG"] = 2
+	symTable["THIS"] = 3
+	symTable["THAT"] = 4
+	symTable["SCREEN"] = 24576
+	symTable["KBD"] = 16384
+	symTable["R0"] = 0
+	symTable["R1"] = 1
+	symTable["R2"] = 2
+	symTable["R3"] = 3
+	symTable["R4"] = 4
+	symTable["R5"] = 5
+	symTable["R6"] = 6
+	symTable["R7"] = 7
+	symTable["R8"] = 8
+	symTable["R9"] = 9
+	symTable["R10"] = 10
+	symTable["R11"] = 11
+	symTable["R12"] = 12
+	symTable["R13"] = 13
+	symTable["R14"] = 14
+	symTable["R15"] = 15
+	return symTable
+
+def Sanity():
+	if args_L <= argument or args[argument] == "help": 
+		Usage()
+
+def Usage():
+	print ("\nUSAGE: PySembler fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
+
+## Program entry-point
+# initialization
+Sanity()
+symTable = dict()
+nextOpenRegister = 16
+# main program loop
+while argument < args_L:
+	
+	symTable.clear()
+	symTable = PredefineSymbols() 
+	#DebugSymbols()
+	progName = GetName()
+	#if (progName): print (progName)
+	"""
+	// Pre-parse input-stream of instructions into a handy-dandy List... let's call it: instructionList.
+	// (Expunge whitespace, including blank lines and comments; that's for humans, not machines.)
+	PreParse(args, argument, instructionList);
+
+	// Output pre-parsed instructions, for humans.
+	DebugParsed($"_{thisProgram}.preparse", instructionList, debugLog);
+
+	// On first-pass, assign requisite symbol table entries. 
+	AssignSymbols(instructionList, debugLog, symbolTable);
+
+	// Second-pass, link symbol table with variables.
+	// TODO: deal with anaochronisitic return of nextOpenRegister... at this point, we no longer need it
+	nextOpenRegister = LinkVariables(instructionList, debugLog, nextOpenRegister, symbolTable);
+
+	// "Third-pass", Parse variables into absolute addresses.
+	ParseVariables(instructionList, symbolTable);
+
+	// Output pre-encoded but fully parsed instructions, again for humans.
+	DebugParsed($"_{thisProgram}.postparse", instructionList, debugLog);
+
+	// Parse and encode instructionList for machines* which are Hack-compliant. 
+	// TODO: deal with anaochronisitic use of nextOpenRegister... at this point, we no longer need it [thanks to "pass three"]
+	List<string> encodedInstructions = DoEncode(instructionList, debugLog, ref nextOpenRegister, symbolTable);
+	"""
+	# end of main loop
+	argument += 1
+	if argument == args_L: break 
