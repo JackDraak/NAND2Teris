@@ -134,14 +134,12 @@ nextOpenRegister = 16
 # main program loop
 while argument < len(sys.argv):
 	fullList = []
-	truncList = []
 	symTable.clear()
 	symTable = PredefineSymbols() 
 	progName = GetName()
 	if (progName): print ("Processing: " + progName) # debug
 
 	# read input
-	line = 0
 	inputFile = open(sys.argv[argument],'r')
 	rawInput = inputFile.readlines()
 	# remove comments
@@ -155,16 +153,42 @@ while argument < len(sys.argv):
 			item = item.translate({ord(c): None for c in ' \t\r\n'})
 			if len(item) > 0:
 				fullList.append(item)
-		line += 1
 
-	print (fullList)
+	print (fullList) # debug
+
+	# assign symbols to symTable
+	#private static void AssignSymbols(List<string> instructionList, List<string> debugLog, List<CodeSymbol> symbolTable)
+	symbolOffset = 0
+	isSymbol = False
+	for line in fullList:
+		if line[0] == '(' and line[-1] == ')': # if line is symbol
+			isSymbol = True
+			inTable = False
+			for key in symTable: # find line in table?
+				if key == line:
+					inTable = True
+					continue
+			if inTable == False: # add new symbols
+				symTable[line] = symbolOffset
+		if isSymbol == False: 
+			symbolOffset += 1
+		isSymbol = False
+
+
+	DebugSymbols()
 
 	"""
-	unicode_line = unicode_line.translate({ord(c): None for c in '!@#$'})
-	t = [] # implicit instantiation
-	t = t.append(1)
-	' hello  apple'.translate(None, ' \n\t\r')
+	try:
+		result = simulate(open("myfile"))
+	except SimulationException as sim_exc:
+		print "error parsing stream", sim_exc
+	else:
+		if result:
+			print "result pass"
+		else:
+			print "result fail"
 
+	symTable["R15"] = 15
 	// On first-pass, assign requisite symbol table entries. 
 	AssignSymbols(instructionList, debugLog, symbolTable);
 
