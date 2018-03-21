@@ -168,12 +168,11 @@ while argument < len(sys.argv):
 				if key == line:
 					inTable = True
 					continue
-			if inTable == False: # add new symbols
+			if not inTable: # add new symbols
 				symTable[line] = symbolOffset
-		if isSymbol == False: 
+		if not isSymbol: 
 			symbolOffset += 1
 		isSymbol = False
-
 
 	DebugSymbols()
 
