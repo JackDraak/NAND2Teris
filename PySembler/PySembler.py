@@ -1,12 +1,18 @@
 #!/usr/bin/env python
 #
 #	@author JackDraak
-#	I'm ostensibly using Python 3 here, fwiw.
 # 
-#	PySembler.py : This small application processes one, or a
-#	batch, of Hack* assembly files to generate Hack machine
-#	language as ASCII output.
+#	PySembler.py : This small application processes one, or a batch,
+#	of Hack* assembly files to generate Hack machine language as 
+#	ASCII output.
 #
+#	*Hack-compliant as defined by the book...
+#
+#				The Elements of Computing Systems: 
+#	Building a Modern Computer from First Principles (Kindle Edition)
+#				 by Noam Nisan & Shimon Schocken
+#
+import re
 import string
 import sys
 
@@ -69,12 +75,22 @@ def EncodeJump(strIn):
     return "000"
 
 ## Other Functions
+def AsDigit(strIn):
+	strAsInteger = int()
+	if strIn.isdigit():
+		return int(strIn)
+	try: 
+		strAsInteger = int(strIn)
+	except:
+		return -1
+	return int(strAsInteger)
+
 def CleanTable(symTable):
 	symTable.clear()
 
 def DebugSymbols():
 	for key in symTable:
-		print("Key: " + str(key) + ", Value: " + str(symTable[key]))
+		print("Key: " + str(key) + ",\tValue: " + str(symTable[key]))
 
 def GetName():
 	delimiter = '.'
@@ -150,7 +166,7 @@ while argument < len(sys.argv):
 			item = item[0:success] 
 	# Remove whitespace (space, tab, return, linefeed).
 		if item:
-			item = item.translate({ord(c): None for c in ' \t\r\n'})
+			item = item.translate({ord(thisChar): None for thisChar in ' \t\r\n'})
 			if len(item) > 0:
 				fullList.append(item)
 
@@ -179,58 +195,81 @@ while argument < len(sys.argv):
 	instructionOffset = 0
 	for line in fullList:
 		if line[0] == '@':
-			addressAsInteger = int()
 			address = line[1:]
-			try: 
-				addressAsInteger = int(address)
-				line = "@" + str(addressAsInteger) # TODO update address in fullList here? Why doesn't this work?
-			except:
+			addressAsInteger = AsDigit(address)
+			if addressAsInteger >= 0:
+				line = "@" + str(addressAsInteger) # TODO fix this?
+			else:
 				inTable = False
 				for key in symTable:
 					if key == address:
 						address = symTable[key]
 						print("symbol in table " + str(address) + " : " + str(key)) # debug
 						inTable = True
-						line = "@" + str(address) # TODO update address in fullList here? Why doesn't this work?
+						line = "@" + str(address) # TODO Why doesn't this work?
 						continue	
 						
 				if not inTable: 
 					print("symbol not in table " + str(address) + " : " + str(nextOpenRegister)) # debug
 					symTable[address] = nextOpenRegister
-					line = "@" + str(nextOpenRegister) # TODO update address in fullList here? Why doesn't this work?
+					line = "@" + str(nextOpenRegister) # TODO ditto...
 					nextOpenRegister += 1
 
 				if not line[0] == '(':
 					instructionOffset += 1
 
 	# Encoding section:
+	outList = []
+	zip = "0000000000000000"
 	for line in fullList:
-		# Encode addresses.
+		# Decode addresses.
 		if line[0] == '@':
-			"""
-			#// Encode 16-bit binary address from decimal address.
-			int addressAsInteger;
-			bool success = int.TryParse(address, out addressAsInteger);
-			if (!success)
-				Console.WriteLine($"FAIL: Encode16BitAddress({address})");
-			int place = 0;
-			int remainder = 0;
-			bool resolved = false;
-			String binaryAddress = " ";
-			int addressToConvert = addressAsInteger;
-			while (!resolved)
-				Math.DivRem(addressToConvert, 2, out remainder);
-				addressToConvert = addressToConvert / 2;
-				binaryAddress = Prepend(binaryAddress, remainder.ToString());
-				place++;
-				if (addressToConvert == 0 | place == 15) resolved = true;
-			while (place < 16)
-				binaryAddress = Prepend(binaryAddress, "0");
-				place++;
-			return StripWhitespace(binaryAddress);
-			"""
-		# Encode instructions.
+			address = line[1:]
+			#print("decode: " + address + " from " + line) # debug
+			addressAsInteger = AsDigit(address)
+			if addressAsInteger >= 0:
+				address = addressAsInteger
+				#print("address resolved " + str(line) + " : " + str(address)) # debug
+			else:
+				inTable = False
+				for key in symTable:
+					if key == address:
+						address = symTable[key]
+						#print("symbol resolved " + str(address) + " : " + str(key)) # debug
+						inTable = True
+						continue
 
+			# Encode addresses.
+			encodedAddress = str(bin(address))
+			encodedAddress = encodedAddress[2:]
+			diff = len(encodedAddress)
+			# Pad address to 16-bits.
+			if diff < 16:
+				offset = 16 - diff
+				encodedAddress = zip[0:offset] + encodedAddress
+
+			outList.append(encodedAddress)
+			print("encode @ " + str(address) + " as\t" + str(encodedAddress)) # debug
+
+		# Encode instructions.
+		elif not line[0] == '(':
+			# Encode jump bits.
+			#print("C-code: " + line) # debug
+			delimiter = ';'
+			success = line.find(delimiter)
+			if success >= 0: 
+				jCode = line[success + 1:]
+				#print ("preJCODE: " + jCode) # debug
+				jCode = EncodeJump(jCode)
+			else:
+				jCode = "000"
+			#print ("postJCODE: " + jCode) # debug
+
+			# Encode dest bits.
+
+			# Encode comp bits.
+
+			# Add composite instruction to outList
 
 	#DebugSymbols() # debug
 	#print (fullList) # debug
