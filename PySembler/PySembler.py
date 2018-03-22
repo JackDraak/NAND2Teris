@@ -8,13 +8,13 @@
 #
 #	*Hack-compliant as defined by the book...
 #
-#				The Elements of Computing Systems: 
-#	Building a Modern Computer from First Principles (Kindle Edition)
-#				 by Noam Nisan & Shimon Schocken
+#		The Elements of Computing Systems: 
+#		Building a Modern Computer from First Principles (Kindle Edition)
+#			by Noam Nisan & Shimon Schocken
 #
-import re
-import string
-import sys
+import re		# Regular Expressions library
+import string	# Strings library
+import sys		# I/O library
 
 ## Variables
 argument = 1
@@ -58,10 +58,10 @@ def EncodeComp(strIn):
     return "0000000"
 
 def EncodeDest(strIn):
-	destA = destD = destM = "0"
-	if strIn.Contains("A"): destA = "1" 
-	if strIn.Contains("D"): destD = "1"
-	if strIn.Contains("M"): destM = "1"
+	destA = destD = destM = "1"
+	if strIn.find("A") == -1: destA = "0" 
+	if strIn.find("D") == -1: destD = "0"
+	if strIn.find("M") == -1: destM = "0"
 	return str(destA + destD + destM)
 
 def EncodeJump(strIn):
@@ -249,28 +249,57 @@ while argument < len(sys.argv):
 				encodedAddress = zip[0:offset] + encodedAddress
 
 			outList.append(encodedAddress)
-			print("encode @ " + str(address) + " as\t" + str(encodedAddress)) # debug
+			#print("@ " + str(address) + " as\t" + str(encodedAddress)) # debug
 
 		# Encode instructions.
+		# TODO: deal with 'assignment' bit
 		elif not line[0] == '(':
 			# Encode jump bits.
+			dcCode = ""
 			#print("C-code: " + line) # debug
 			delimiter = ';'
 			success = line.find(delimiter)
 			if success >= 0: 
 				jCode = line[success + 1:]
+				dcCode = line[0:success]
+				#print ("dcCODE: " + dcCode) # debug
+				
 				#print ("preJCODE: " + jCode) # debug
 				jCode = EncodeJump(jCode)
 			else:
+				dcCode = line
 				jCode = "000"
 			#print ("postJCODE: " + jCode) # debug
 
 			# Encode dest bits.
+			delimiter = '='
+			success = line.find(delimiter)
+			if success > 0:
+				dCode = line[0:success]
+				dCode = EncodeDest(dCode)
+				#print ("dCODE: " + dCode) # debug
 
 			# Encode comp bits.
+			l = len(line);
+			delimiter = '='
+			success = line.find(delimiter)
+			if success >= 0:
+				cCode = dcCode[success + 1:]
+				cCode = EncodeComp(cCode)
+				#print ("cCODE: " + cCode) # debug
+				aCode = "1"
+			else:
+				aCode = "0"
 
 			# Add composite instruction to outList
+			outList.append("111" + cCode + dCode + jCode)
+			#print("C-CODE:\t111" + cCode + dCode + jCode) # debug
 
+	outFile = open(progName + ".hack", 'w')
+	for line in outList:
+		outFile.write(line + "\r\n")
+	outFile.close()
+	#print (outList) # debug
 	#DebugSymbols() # debug
 	#print (fullList) # debug
 
