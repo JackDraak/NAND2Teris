@@ -12,12 +12,13 @@
 #		Building a Modern Computer from First Principles (Kindle Edition)
 #			by Noam Nisan & Shimon Schocken
 #
-import re		# Regular Expressions library
+import re	# Regular Expressions library
 import string	# Strings library
-import sys		# I/O library
+import sys	# I/O library
 
 ## Variables
 argument = 1
+symTable = dict()
 
 ## Encoding Functions
 def EncodeComp(strIn):
@@ -142,10 +143,7 @@ def Usage():
 	print ("\nUSAGE: PySembler fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
 
 ## Program entry-point:
-# Initialization.
 Sanity()
-symTable = dict()
-
 # Main program loop.
 while argument < len(sys.argv):
 	fullList = []
@@ -212,7 +210,7 @@ while argument < len(sys.argv):
 				if not inTable: 
 					print("symbol not in table " + str(address) + " : " + str(nextOpenRegister)) # debug
 					symTable[address] = nextOpenRegister
-					line = "@" + str(nextOpenRegister) # TODO ditto...
+					line = "@" + str(nextOpenRegister) # TODO ditto... do I even care?
 					nextOpenRegister += 1
 
 				if not line[0] == '(':
@@ -252,7 +250,7 @@ while argument < len(sys.argv):
 			#print("@ " + str(address) + " as\t" + str(encodedAddress)) # debug
 
 		# Encode instructions.
-		# TODO: deal with 'assignment' bit
+		# TODO: deal with 'assignment' bit?
 		elif not line[0] == '(':
 			# Encode jump bits.
 			dcCode = ""
@@ -280,13 +278,12 @@ while argument < len(sys.argv):
 				#print ("dCODE: " + dCode) # debug
 
 			# Encode comp bits.
-			l = len(line);
 			delimiter = '='
 			success = line.find(delimiter)
 			if success >= 0:
 				cCode = dcCode[success + 1:]
 				cCode = EncodeComp(cCode)
-				#print ("cCODE: " + cCode) # debug
+				print ("cCODE: " + line + "\t" + dcCode[success + 1:] + "\t" + cCode) # debug
 				aCode = "1"
 			else:
 				aCode = "0"
