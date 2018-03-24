@@ -15,6 +15,7 @@
 import re	# Regular Expressions library
 import string	# Strings library
 import sys	# I/O library
+import os
 
 ## Variables
 argument = 1
@@ -140,7 +141,7 @@ def StripComments(strIn):
 		return strOut
 
 def Usage():
-	print ("\nUSAGE: PySembler fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
+	print ("\n" + str(os.name) + "\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
 
 ## Program entry-point:
 Sanity()
@@ -158,13 +159,14 @@ while argument < len(sys.argv):
 	rawInput = inputFile.readlines()
 	# Remove comments.
 	for item in rawInput:
-		delimiter = '/'
-		success = item.find(delimiter)
+		whitespace = ' \t\r\n'
+		remark = '/'
+		success = item.find(remark)
 		if success >= 0: 
-			item = item[0:success] 
+			item = item[0:success]
 	# Remove whitespace (space, tab, return, linefeed).
 		if item:
-			item = item.translate({ord(thisChar): None for thisChar in ' \t\r\n'})
+			item = item.translate({ord(thisChar): None for thisChar in whitespace})
 			if len(item) > 0:
 				fullList.append(item)
 
@@ -195,22 +197,18 @@ while argument < len(sys.argv):
 		if line[0] == '@':
 			address = line[1:]
 			addressAsInteger = AsDigit(address)
-			if addressAsInteger >= 0:
-				line = "@" + str(addressAsInteger) # TODO fix this?
-			else:
+			if addressAsInteger < 0:
 				inTable = False
 				for key in symTable:
 					if key == address:
 						address = symTable[key]
-						print("symbol in table " + str(address) + " : " + str(key)) # debug
+						#print("symbol in table " + str(address) + " : " + str(key)) # debug
 						inTable = True
-						line = "@" + str(address) # TODO Why doesn't this work?
 						continue	
 						
 				if not inTable: 
-					print("symbol not in table " + str(address) + " : " + str(nextOpenRegister)) # debug
+					#print("symbol not in table " + str(address) + " : " + str(nextOpenRegister)) # debug
 					symTable[address] = nextOpenRegister
-					line = "@" + str(nextOpenRegister) # TODO ditto... do I even care?
 					nextOpenRegister += 1
 
 				if not line[0] == '(':
@@ -283,7 +281,7 @@ while argument < len(sys.argv):
 			if success >= 0:
 				cCode = dcCode[success + 1:]
 				cCode = EncodeComp(cCode)
-				print ("cCODE: " + line + "\t" + dcCode[success + 1:] + "\t" + cCode) # debug
+				#print ("cCODE: " + line + "\t" + dcCode[success + 1:] + "\t" + cCode) # debug
 				aCode = "1"
 			else:
 				aCode = "0"
@@ -294,11 +292,8 @@ while argument < len(sys.argv):
 
 	outFile = open(progName + ".hack", 'w')
 	for line in outList:
-		outFile.write(line + "\r\n")
+		outFile.write(line + "\n")
 	outFile.close()
-	#print (outList) # debug
-	#DebugSymbols() # debug
-	#print (fullList) # debug
 
 	# End of main loop.
 	argument += 1
