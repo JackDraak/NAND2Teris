@@ -4,7 +4,7 @@
 # 
 #	PySembler.py : This small application processes one, or a batch,
 #	of Hack* assembly files to generate Hack machine language as 
-#	ASCII output.
+#	ASCII output; based on my C# implementation of March 2018.
 #
 #	*Hack-compliant as defined by the book...
 #
@@ -18,26 +18,18 @@ import sys	# I/O library
 import os
 
 def Main():
-	## Program entry-point:
 	argument = 1
-	Sanity(argument)
-	# Main program loop.
+	Sanity(argument) # in a prefect world, this is robust
 	while argument < len(sys.argv):
-		thisProg = []
 		inputFile = open(sys.argv[argument],'r')
 		progName = GetName(argument)
-		symTable = PredefineSymbols() 
 		if (progName): print ("Processing: " + progName) # debug
 		thisProg = Preparse(inputFile)
+		symTable = PredefineSymbols() 
 		symTable = LinkSymbols(thisProg, symTable)
 		symTable = LinkVariables(thisProg, symTable)
-		#debug = DebugSymbols(symTable) # debug
-		#for anyLine in debug:
-		#	print(anyLine)
 		machineCode = EncodeInstructions(thisProg, symTable)
 		GenHack(machineCode, progName)
-
-		# End of main loop.
 		argument += 1
 		if argument == len(sys.argv): break 
 
@@ -80,10 +72,10 @@ def EncodeComp(strIn):
     return "0000000"
 
 def EncodeDest(strIn):
-	destA = destD = destM = "1"
-	if strIn.find("A") == -1: destA = "0" 
-	if strIn.find("D") == -1: destD = "0"
-	if strIn.find("M") == -1: destM = "0"
+	destA = destD = destM = "0"
+	if "A" in strIn : destA = "1" 
+	if "D" in strIn : destD = "1"
+	if "M" in strIn : destM = "1"
 	return str(destA + destD + destM)
 
 def EncodeJump(strIn):
