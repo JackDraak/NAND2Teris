@@ -107,78 +107,59 @@ def DebugSymbols(symbolTable):
 
 def EncodeInstructions(fullList, symTable):
 	outList = []
-	zip = "0000000000000000"
+	instructionCount = 0
 	for line in fullList:
-		# Decode addresses.
 		if line[0] == '@':
 			address = line[1:]
-			#print("decode: " + address + " from " + line) # debug
 			addressAsInteger = AsDigit(address)
 			if addressAsInteger >= 0:
 				address = addressAsInteger
-				#print("address resolved " + str(line) + " : " + str(address)) # debug
 			else:
 				inTable = False
 				for key in symTable:
 					if key == address:
 						address = symTable[key]
-						#print("symbol resolved " + str(address) + " : " + str(key)) # debug
 						inTable = True
 						continue
-	
-			# Encode addresses.
 			encodedAddress = str(bin(address))
 			encodedAddress = encodedAddress[2:]
+			zip = "0000000000000000" # 16-bit base
 			diff = len(encodedAddress)
-			# Pad address to 16-bits.
-			if diff < 16:
-				offset = 16 - diff
+			if diff < len(zip):
+				offset = len(zip) - diff
 				encodedAddress = zip[0:offset] + encodedAddress
-	
 			outList.append(encodedAddress)
+			instructionCount += 1
 			#print("@ " + str(address) + " as\t" + str(encodedAddress)) # debug
 	
 		# Encode instructions.
-		# TODO: deal with 'assignment' bit?
 		elif not line[0] == '(':
-			# Encode jump bits.
 			dcCode = str()
-			#print("C-code: " + line) # debug
 			jumpInstruction = ';'
 			success = line.find(jumpInstruction)
 			if success >= 0: 
-				jCode = line[success + 1:]
 				dcCode = line[0:success]
-				#print ("dcCODE: " + dcCode) # debug				
-				#print ("preJCODE: " + jCode) # debug
+				jCode = line[success + 1:]
 				jCode = EncodeJump(jCode)
 			else:
 				dcCode = line
 				jCode = "000"
-			#print ("postJCODE: " + jCode) # debug
-	
-			# Encode dest bits.
-			delimiter = '='
-			success = line.find(delimiter)
+
+			assignment = '='
+			success = dcCode.find(assignment)
 			if success > 0:
-				dCode = line[0:success]
-				dCode = EncodeDest(dCode)
-				#print ("dCODE: " + dCode) # debug
-	
-			# Encode comp bits.
-			delimiter = '='
-			success = line.find(delimiter)
-			if success >= 0:
 				cCode = dcCode[success + 1:]
 				cCode = EncodeComp(cCode)
-				#print ("cCODE: " + line + "\t" + dcCode[success + 1:] + "\t" + cCode) # debug
-				aCode = "1"
+				dCode = dcCode[0:success]
+				dCode = EncodeDest(dCode)
 			else:
-				aCode = "0"
+				cCode = dcCode[success + 1:]
+				cCode = EncodeComp(cCode)
+				dCode = "000"
 	
-			# Add composite instruction to outList
 			outList.append("111" + cCode + dCode + jCode)
-			#print("C-CODE:\t111" + cCode + dCode + jCode) # debug
+			instructionCount += 1
+			#print("INSTR: " + line + "\tCODE:\t111  " + cCode + "  " + dCode + "  " + jCode + "\t" + str(instructionCount)) # debug
 	return outList
 
 def GenHack(machineCode, progName):
@@ -199,19 +180,15 @@ def LinkSymbols(thisList, symTable):
 	symbolOffset = 0
 	isSymbol = False
 	for line in thisList:
-		# If line is symbol...
 		if line[0] == '(' and line[-1] == ')':
 			isSymbol = True
 			inTable = False
-			# Try to find symbol in table...
 			for key in symTable:
 				if key == line:
 					inTable = True
 					continue
-			# Add new symbols.
 			if not inTable:
 				symTable[line[1:-1]] = symbolOffset
-		# Manage offset.
 		if not isSymbol: 
 			symbolOffset += 1
 		isSymbol = False
@@ -249,8 +226,8 @@ def PredefineSymbols():
 	symTable["ARG"] = 2
 	symTable["THIS"] = 3
 	symTable["THAT"] = 4
-	symTable["SCREEN"] = 24576
-	symTable["KBD"] = 16384
+	symTable["SCREEN"] = 16384
+	symTable["KBD"] = 24576
 	symTable["R0"] = 0
 	symTable["R1"] = 1
 	symTable["R2"] = 2
@@ -291,11 +268,11 @@ def Sanity(arg):
 def StripComments(strIn):
 	delimiter = '/'
 	success = strIn.find(delimiter)
-	if success >= 1: 
-		strOut = strIn[0:success]
-		return strOut
+	if success >= 0: # change
+		return strIn[0:success]
 
 def Usage():
 	print ("\n" + str(os.name) + "\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
 
+# Finally getting to the point:
 Main()
