@@ -160,7 +160,7 @@ def Preparse(inFile):
 	rawInput = inFile.readlines()
 	for item in rawInput:
 		voids = ' \t\r\n'
-		remark = '/'
+		remark = '//'
 		success = item.find(remark)
 		if success >= 0: item = item[0:success]
 		if item:
@@ -170,11 +170,6 @@ def Preparse(inFile):
 
 def Sanity(arg):
 	if len(sys.argv) <= arg or sys.argv[arg] == "help": Usage()
-
-def StripComments(strIn):
-	delimiter = '/'
-	success = strIn.find(delimiter)
-	if success >= 0: return strIn[0:success]
 
 def Usage():
 	print ("\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
