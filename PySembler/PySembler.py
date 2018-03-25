@@ -15,23 +15,25 @@
 import re	# Regular Expressions library
 import string	# Strings library
 import sys	# I/O library
+import time
+import threading
 
 def Main():
 	argument = 1
-	Sanity(argument) # In a prefect world, this is robust
+	Sanity(argument) # TODO: make robust
 	while argument < len(sys.argv):
 		inFile = open(sys.argv[argument],'r')
 		progName = GetName(argument)
-		if (progName): print ("Processing: " + progName) # debug
-
-		# The meat and potatoes:
+		if (progName): print ("Processing: " + progName) # info
+		progressIndicator = SpinHaptic()
+		progressIndicator.start()
 		thisProg = Preparse(inFile)
 		symTable = PredefineSymbols() 
 		symTable = LinkSymbols(thisProg, symTable)
 		symTable = LinkVariables(thisProg, symTable)
 		machineCode = EncodeInstructions(thisProg, symTable)
 		GenHack(machineCode, progName)
-
+		progressIndicator.stop()
 		argument += 1
 		if argument == len(sys.argv): break 
 
@@ -102,8 +104,7 @@ def EncodeInstructions(fullList, symTable):
 		if line[0] == '@':
 			address = line[1:]
 			addressAsInteger = AsDigit(address)
-			if addressAsInteger >= 0:
-				address = addressAsInteger
+			if addressAsInteger >= 0: address = addressAsInteger
 			else:
 				inTable = False
 				for key in symTable:
@@ -127,8 +128,7 @@ def EncodeInstructions(fullList, symTable):
 			if success >= 0: 
 				dcCode = line[0:success]
 				jCode = EncodeJump(line[success + 1:])
-			else:
-				jCode = "000"
+			else: jCode = "000"
 			assignment = '='
 			success = dcCode.find(assignment)
 			if success > 0:
@@ -143,8 +143,7 @@ def EncodeInstructions(fullList, symTable):
 
 def GenHack(machineCode, progName):
 	outFile = open(progName + ".hack", 'w')
-	for instruction in machineCode:
-		outFile.write(instruction + "\n")
+	for instruction in machineCode: outFile.write(instruction + "\n")
 	outFile.close()
 
 def GetName(arg):
@@ -166,10 +165,8 @@ def LinkSymbols(thisList, symTable):
 				if key == line:
 					inTable = True
 					continue
-			if not inTable:
-				symTable[line[1:-1]] = symbolOffset
-		if not isSymbol: 
-			symbolOffset += 1
+			if not inTable: symTable[line[1:-1]] = symbolOffset
+		if not isSymbol: symbolOffset += 1
 		isSymbol = False
 	return symTable
 
@@ -190,8 +187,7 @@ def LinkVariables(thisList, symTable):
 				if not inTable: 
 					symTable[address] = nextOpenRegister
 					nextOpenRegister += 1	
-				if not line[0] == '(':
-					instructionOffset += 1
+				if not line[0] == '(': instructionOffset += 1
 	return symTable
 
 def PredefineSymbols():
@@ -228,25 +224,49 @@ def Preparse(inFile):
 		whitespace = ' \t\r\n'
 		remark = '/'
 		success = item.find(remark)
-		if success >= 0: 
-			item = item[0:success]
+		if success >= 0: item = item[0:success]
 		if item:
 			item = item.translate({ord(thisChar): None for thisChar in whitespace})
-			if len(item) > 0:
-				thisList.append(item)
+			if len(item) > 0: thisList.append(item)
 	return thisList
 
 def Sanity(arg):
-	if len(sys.argv) <= arg or sys.argv[arg] == "help": 
-		Usage()
+	if len(sys.argv) <= arg or sys.argv[arg] == "help": Usage()
 
 def StripComments(strIn):
 	delimiter = '/'
 	success = strIn.find(delimiter)
-	if success >= 0:
-		return strIn[0:success]
+	if success >= 0: return strIn[0:success]
 
 def Usage():
 	print ("\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
+
+class SpinHaptic:
+	busy = False
+	delay = 0.1
+	@staticmethod
+	def haptic_cursor():
+		while 1: 
+			for cursor in '\\-/|': yield cursor
+
+	def __init__(self, delay=None):
+		self.spinner = self.haptic_cursor()
+		if delay and float(delay): self.delay = delay
+
+	def spinner_task(self):
+		while self.busy:
+			sys.stdout.write(next(self.spinner))
+			sys.stdout.flush()
+			time.sleep(self.delay)
+			sys.stdout.write('\b')
+			sys.stdout.flush()
+
+	def start(self):
+		self.busy = True
+		threading.Thread(target=self.spinner_task).start()
+
+	def stop(self):
+		self.busy = False
+		time.sleep(self.delay)
 
 Main()
