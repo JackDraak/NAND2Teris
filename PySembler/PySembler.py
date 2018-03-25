@@ -12,11 +12,9 @@
 #		Building a Modern Computer from First Principles (Kindle Edition)
 #			by Noam Nisan & Shimon Schocken
 #
-import re	# Regular Expressions library
-import string	# Strings library
-import sys	# I/O library
-import time
-import threading
+import string, sys, time, threading
+PLATFORM_BIT_WIDTH = 16
+PLATFORM_BASE_REGISTER = 16
 
 def Main():
 	argument = 1
@@ -39,58 +37,28 @@ def Main():
 
 ## Encoding Functions
 def EncodeComp(strIn):
-    if strIn == "0":     return "0101010"
-    elif strIn == "1":   return "0111111"
-    elif strIn == "-1":  return "0111010"
-    elif strIn == "D":   return "0001100"
-    elif strIn == "A":   return "0110000"
-    elif strIn == "!D":  return "0001101"
-    elif strIn == "!A":  return "0110001"
-    elif strIn == "-D":  return "0001111"
-    elif strIn == "-A":  return "0110011"
-    elif strIn == "D+1": return "0011111"
-    elif strIn == "A+1": return "0110111"
-    elif strIn == "D-1": return "0001110"
-    elif strIn == "A-1": return "0110010"
-    elif strIn == "D+A": return "0000010"
-    elif strIn == "A+D": return "0000010"
-    elif strIn == "D-A": return "0010011"
-    elif strIn == "A-D": return "0000111"
-    elif strIn == "D&A": return "0000000"
-    elif strIn == "D|A": return "0010101"
-    elif strIn == "A&D": return "0000000"
-    elif strIn == "A|D": return "0010101"
-    elif strIn == "M":   return "1110000"
-    elif strIn == "!M":  return "1110001"
-    elif strIn == "-M":  return "1110011"
-    elif strIn == "M+1": return "1110111"
-    elif strIn == "M-1": return "1110010"
-    elif strIn == "D+M": return "1000010"
-    elif strIn == "M+D": return "1000010"
-    elif strIn == "D-M": return "1010011"
-    elif strIn == "M-D": return "1000111"
-    elif strIn == "D&M": return "1000000"
-    elif strIn == "D|M": return "1010101"
-    elif strIn == "M&D": return "1000000"
-    elif strIn == "M|D": return "1010101"
-    return "0000000"
+	compCodes = {"0":"0101010", "1":"0111111", "-1":"0111010", "D":"0001100", 
+			"A":"0110000", "!D":"0001101", "!A":"0110001", "-D":"0001111",
+			"-A":"0110011", "D+1":"0011111", "A+1":"0110111", "D-1":"0001110",
+			"A-1":"0110010", "D+A":"0000010", "A+D":"0000010", "D-A":"0010011", 
+			"A-D":"0000111", "D&A":"0000000", "D|A":"0010101", "A&D":"0000000",
+			"A|D":"0010101", "M":"1110000", "!M":"1110001", "-M":"1110011",
+			"M+1":"1110111", "M-1":"1110010", "D+M":"1000010", "M+D":"1000010",
+			"D-M":"1010011", "M-D":"1000111", "D&M":"1000000", "D|M":"1010101",
+			"M&D":"1000000", "M|D":"1010101"}
+	return compCodes.get(strIn, "0000000")
 
 def EncodeDest(strIn):
 	destA = destD = destM = "0"
-	if "A" in strIn : destA = "1" 
-	if "D" in strIn : destD = "1"
-	if "M" in strIn : destM = "1"
+	if "A" in strIn: destA = "1" 
+	if "D" in strIn: destD = "1"
+	if "M" in strIn: destM = "1"
 	return str(destA + destD + destM)
 
 def EncodeJump(strIn):
-    if strIn == "JGT":   return "001"
-    elif strIn == "JEQ": return "010"
-    elif strIn == "JGE": return "011"
-    elif strIn == "JLT": return "100"
-    elif strIn == "JNE": return "101"
-    elif strIn == "JLE": return "110"
-    elif strIn == "JMP": return "111"
-    return "000"
+	jumpCodes = {"JGT":"001", "JEQ":"010",  "JGE":"011",  "JLT":"100",  
+		  "JNE":"101",  "JLE":"110",  "JMP":"111"}
+	return jumpCodes.get(strIn, "000")
 
 ## Other Methods
 def AsDigit(strIn):
@@ -114,7 +82,7 @@ def EncodeInstructions(fullList, symTable):
 						continue
 			encodedAddress = str(bin(address))
 			encodedAddress = encodedAddress[2:]
-			zip = "0000000000000000"
+			zip = "0" * PLATFORM_BIT_WIDTH
 			diff = len(encodedAddress)
 			if diff < len(zip):
 				offset = len(zip) - diff
@@ -172,7 +140,7 @@ def LinkSymbols(thisList, symTable):
 
 def LinkVariables(thisList, symTable):
 	instructionOffset = 0
-	nextOpenRegister = 16
+	nextOpenRegister = PLATFORM_BASE_REGISTER
 	for line in thisList:
 		if line[0] == '@':
 			address = line[1:]
@@ -191,42 +159,22 @@ def LinkVariables(thisList, symTable):
 	return symTable
 
 def PredefineSymbols():
-	symTable = dict()
-	symTable["SP"] = 0
-	symTable["LCL"] = 1
-	symTable["ARG"] = 2
-	symTable["THIS"] = 3
-	symTable["THAT"] = 4
-	symTable["SCREEN"] = 16384
-	symTable["KBD"] = 24576
-	symTable["R0"] = 0
-	symTable["R1"] = 1
-	symTable["R2"] = 2
-	symTable["R3"] = 3
-	symTable["R4"] = 4
-	symTable["R5"] = 5
-	symTable["R6"] = 6
-	symTable["R7"] = 7
-	symTable["R8"] = 8
-	symTable["R9"] = 9
-	symTable["R10"] = 10
-	symTable["R11"] = 11
-	symTable["R12"] = 12
-	symTable["R13"] = 13
-	symTable["R14"] = 14
-	symTable["R15"] = 15
-	return symTable
+	table =  {"SP":0, "LCL":1, "ARG":2, "THIS":3, "THAT":4, "SCREEN":16384, 
+		  "KBD":24576, "R0":0, "R1":1, "R2":2, "R3":3, "R4":4, "R5":5, 
+		  "R6":6, "R7":7, "R8":8, "R9":9, "R10":10, "R11":11, "R12":12, 
+		  "R13":13, "R14":14, "R15":15 }
+	return table
 
 def Preparse(inFile):
 	thisList = []
 	rawInput = inFile.readlines()
 	for item in rawInput:
-		whitespace = ' \t\r\n'
+		voids = ' \t\r\n'
 		remark = '/'
 		success = item.find(remark)
 		if success >= 0: item = item[0:success]
 		if item:
-			item = item.translate({ord(thisChar): None for thisChar in whitespace})
+			item = item.translate({ord(thisChar): None for thisChar in voids})
 			if len(item) > 0: thisList.append(item)
 	return thisList
 
@@ -243,7 +191,7 @@ def Usage():
 
 class SpinHaptic:
 	busy = False
-	delay = 0.1
+	delay = 0.03
 	@staticmethod
 	def haptic_cursor():
 		while 1: 
