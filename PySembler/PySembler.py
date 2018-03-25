@@ -15,21 +15,23 @@
 import re	# Regular Expressions library
 import string	# Strings library
 import sys	# I/O library
-import os
 
 def Main():
 	argument = 1
-	Sanity(argument) # in a prefect world, this is robust
+	Sanity(argument) # In a prefect world, this is robust
 	while argument < len(sys.argv):
-		inputFile = open(sys.argv[argument],'r')
+		inFile = open(sys.argv[argument],'r')
 		progName = GetName(argument)
 		if (progName): print ("Processing: " + progName) # debug
-		thisProg = Preparse(inputFile)
+
+		# The meat and potatoes:
+		thisProg = Preparse(inFile)
 		symTable = PredefineSymbols() 
 		symTable = LinkSymbols(thisProg, symTable)
 		symTable = LinkVariables(thisProg, symTable)
 		machineCode = EncodeInstructions(thisProg, symTable)
 		GenHack(machineCode, progName)
+
 		argument += 1
 		if argument == len(sys.argv): break 
 
@@ -90,20 +92,8 @@ def EncodeJump(strIn):
 
 ## Other Methods
 def AsDigit(strIn):
-	strAsInteger = int()
-	if strIn.isdigit():
-		return int(strIn)
-	try: 
-		strAsInteger = int(strIn)
-	except:
-		return -1
-	return int(strAsInteger)
-
-def DebugSymbols(symbolTable):
-	symbolDebug = []
-	for key in symbolTable:
-		symbolDebug.append("Key: " + str(key) + ",\tValue: " + str(symbolTable[key]))
-	return symbolDebug
+	if strIn.isdigit():	return int(strIn)
+	return -1
 
 def EncodeInstructions(fullList, symTable):
 	outList = []
@@ -123,43 +113,32 @@ def EncodeInstructions(fullList, symTable):
 						continue
 			encodedAddress = str(bin(address))
 			encodedAddress = encodedAddress[2:]
-			zip = "0000000000000000" # 16-bit base
+			zip = "0000000000000000"
 			diff = len(encodedAddress)
 			if diff < len(zip):
 				offset = len(zip) - diff
 				encodedAddress = zip[0:offset] + encodedAddress
 			outList.append(encodedAddress)
 			instructionCount += 1
-			#print("@ " + str(address) + " as\t" + str(encodedAddress)) # debug
-	
-		# Encode instructions.
 		elif not line[0] == '(':
-			dcCode = str()
+			dcCode = line
 			jumpInstruction = ';'
 			success = line.find(jumpInstruction)
 			if success >= 0: 
 				dcCode = line[0:success]
-				jCode = line[success + 1:]
-				jCode = EncodeJump(jCode)
+				jCode = EncodeJump(line[success + 1:])
 			else:
-				dcCode = line
 				jCode = "000"
-
 			assignment = '='
 			success = dcCode.find(assignment)
 			if success > 0:
-				cCode = dcCode[success + 1:]
-				cCode = EncodeComp(cCode)
-				dCode = dcCode[0:success]
-				dCode = EncodeDest(dCode)
+				cCode = EncodeComp(dcCode[success + 1:])
+				dCode = EncodeDest(dcCode[0:success])
 			else:
-				cCode = dcCode[success + 1:]
-				cCode = EncodeComp(cCode)
-				dCode = "000"
-	
+				cCode = EncodeComp(dcCode[success + 1:])
+				dCode = "000"	
 			outList.append("111" + cCode + dCode + jCode)
 			instructionCount += 1
-			#print("INSTR: " + line + "\tCODE:\t111  " + cCode + "  " + dCode + "  " + jCode + "\t" + str(instructionCount)) # debug
 	return outList
 
 def GenHack(machineCode, progName):
@@ -206,15 +185,11 @@ def LinkVariables(thisList, symTable):
 				for key in symTable:
 					if key == address:
 						address = symTable[key]
-						#print("symbol in table " + str(address) + " : " + str(key)) # debug
 						inTable = True
-						continue	
-						
+						continue							
 				if not inTable: 
-					#print("symbol not in table " + str(address) + " : " + str(nextOpenRegister)) # debug
 					symTable[address] = nextOpenRegister
-					nextOpenRegister += 1
-	
+					nextOpenRegister += 1	
 				if not line[0] == '(':
 					instructionOffset += 1
 	return symTable
@@ -268,11 +243,10 @@ def Sanity(arg):
 def StripComments(strIn):
 	delimiter = '/'
 	success = strIn.find(delimiter)
-	if success >= 0: # change
+	if success >= 0:
 		return strIn[0:success]
 
 def Usage():
-	print ("\n" + str(os.name) + "\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
+	print ("\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
 
-# Finally getting to the point:
 Main()
