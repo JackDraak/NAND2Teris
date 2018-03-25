@@ -128,12 +128,8 @@ def LinkSymbols(thisList, symTable):
 	for line in thisList:
 		if line[0] == '(' and line[-1] == ')':
 			isSymbol = True
-			inTable = False
-			for key in symTable:
-				if key == line:
-					inTable = True
-					continue
-			if not inTable: symTable[line[1:-1]] = symbolOffset
+			# TODO fix how labels are stored, as-is, this could cause erros w/ duplicate labels, no?
+			if not line in symTable.keys(): symTable[line[1:-1]] = symbolOffset 
 		if not isSymbol: symbolOffset += 1
 		isSymbol = False
 	return symTable
@@ -145,14 +141,8 @@ def LinkVariables(thisList, symTable):
 		if line[0] == '@':
 			address = line[1:]
 			addressAsInteger = AsDigit(address)
-			if addressAsInteger < 0:
-				inTable = False
-				for key in symTable:
-					if key == address:
-						address = symTable[key]
-						inTable = True
-						continue							
-				if not inTable: 
+			if addressAsInteger < 0:						
+				if not address in symTable.keys(): 
 					symTable[address] = nextOpenRegister
 					nextOpenRegister += 1	
 				if not line[0] == '(': instructionOffset += 1
