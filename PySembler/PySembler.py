@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
-#	@author JackDraak, March 2018
+#	@author	JackDraak
+#	@date	26 March 2018
 # 
 #	PySembler.py : This small application processes one, or a batch,
 #	of Hack* assembly files, generating Hack machine language as 
@@ -34,39 +35,6 @@ def Main():
 		argument += 1
 		if argument == len(sys.argv): break 
 
-## DATA
-def EncodeComp(strIn):
-	compCodes = {"0":"0101010", "1":"0111111", "-1":"0111010", "D":"0001100", 
-			"A":"0110000", "!D":"0001101", "!A":"0110001", "-D":"0001111",
-			"-A":"0110011", "D+1":"0011111", "A+1":"0110111", "D-1":"0001110",
-			"A-1":"0110010", "D+A":"0000010", "A+D":"0000010", "D-A":"0010011", 
-			"A-D":"0000111", "D&A":"0000000", "D|A":"0010101", "A&D":"0000000",
-			"A|D":"0010101", "M":"1110000", "!M":"1110001", "-M":"1110011",
-			"M+1":"1110111", "M-1":"1110010", "D+M":"1000010", "M+D":"1000010",
-			"D-M":"1010011", "M-D":"1000111", "D&M":"1000000", "D|M":"1010101",
-			"M&D":"1000000", "M|D":"1010101"}
-	return compCodes.get(strIn, "0000000")
-
-def EncodeDest(strIn):
-	destA = destD = destM = "0"
-	if "A" in strIn: destA = "1" 
-	if "D" in strIn: destD = "1"
-	if "M" in strIn: destM = "1"
-	return str(destA + destD + destM)
-
-def EncodeJump(strIn):
-	jumpCodes = {"JGT":"001", "JEQ":"010",  "JGE":"011",  "JLT":"100",  
-		  "JNE":"101",  "JLE":"110",  "JMP":"111"}
-	return jumpCodes.get(strIn, "000")
-
-def InitSymbols():
-	table =  {"SP":0, "LCL":1, "ARG":2, "THIS":3, "THAT":4, "SCREEN":16384, 
-		  "KBD":24576, "R0":0, "R1":1, "R2":2, "R3":3, "R4":4, "R5":5, 
-		  "R6":6, "R7":7, "R8":8, "R9":9, "R10":10, "R11":11, "R12":12, 
-		  "R13":13, "R14":14, "R15":15 }
-	return table
-
-## FUNCTIONS
 def AsInteger(strIn):
 	if strIn.isdigit():	return int(strIn)
 	return -1
@@ -163,7 +131,6 @@ def Preparse(inFile):
 def Sanity(arg):
 	if len(sys.argv) <= arg or sys.argv[arg] == "help": Usage()
 
-## "HAPTICS" (user feedback)
 def Usage():
 	print ("\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
 
@@ -171,17 +138,17 @@ class HapticCursor:
 	delay = HAPTIC_INTERVAL
 	busy = False
 	@staticmethod
-	def haptic_cursor():
+	def current_cursor():
 		while 1: 
 			for cursor in '\\-/|': yield cursor
 
 	def __init__(self, delay=None):
-		self.spinner = self.haptic_cursor()
-		if delay and float(delay): self.delay = delay
+		self.cursor = self.current_cursor()
+		if delay and float(delay): self.delay = float(delay)
 
-	def spinner_task(self):
+	def haptic_task(self):
 		while self.busy:
-			sys.stdout.write(next(self.spinner))
+			sys.stdout.write(next(self.cursor))
 			sys.stdout.flush()
 			time.sleep(self.delay)
 			sys.stdout.write('\b')
@@ -189,10 +156,42 @@ class HapticCursor:
 
 	def start(self):
 		self.busy = True
-		threading.Thread(target=self.spinner_task).start()
+		threading.Thread(target=self.haptic_task).start()
 
 	def stop(self):
 		self.busy = False
 		time.sleep(self.delay)
+
+## DATA TABLES
+def EncodeComp(strIn):
+	compCodes = {"0":"0101010", "1":"0111111", "-1":"0111010", "D":"0001100", 
+			"A":"0110000", "!D":"0001101", "!A":"0110001", "-D":"0001111",
+			"-A":"0110011", "D+1":"0011111", "A+1":"0110111", "D-1":"0001110",
+			"A-1":"0110010", "D+A":"0000010", "A+D":"0000010", "D-A":"0010011", 
+			"A-D":"0000111", "D&A":"0000000", "D|A":"0010101", "A&D":"0000000",
+			"A|D":"0010101", "M":"1110000", "!M":"1110001", "-M":"1110011",
+			"M+1":"1110111", "M-1":"1110010", "D+M":"1000010", "M+D":"1000010",
+			"D-M":"1010011", "M-D":"1000111", "D&M":"1000000", "D|M":"1010101",
+			"M&D":"1000000", "M|D":"1010101"}
+	return compCodes.get(strIn, "0000000")
+
+def EncodeDest(strIn):
+	destA = destD = destM = "0"
+	if "A" in strIn: destA = "1" 
+	if "D" in strIn: destD = "1"
+	if "M" in strIn: destM = "1"
+	return str(destA + destD + destM)
+
+def EncodeJump(strIn):
+	jumpCodes = {"JGT":"001", "JEQ":"010",  "JGE":"011",  "JLT":"100",  
+		  "JNE":"101",  "JLE":"110",  "JMP":"111"}
+	return jumpCodes.get(strIn, "000")
+
+def InitSymbols():
+	table =  {"SP":0, "LCL":1, "ARG":2, "THIS":3, "THAT":4, "SCREEN":16384, 
+		  "KBD":24576, "R0":0, "R1":1, "R2":2, "R3":3, "R4":4, "R5":5, 
+		  "R6":6, "R7":7, "R8":8, "R9":9, "R10":10, "R11":11, "R12":12, 
+		  "R13":13, "R14":14, "R15":15 }
+	return table
 
 Main()
