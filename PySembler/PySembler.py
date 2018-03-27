@@ -22,6 +22,7 @@ def Main():
 	argument = PLATFORM_FIRST_ARG
 	Sanity(argument)
 	while argument < len(sys.argv):
+		benchmark = time.clock()
 		progName = GetName(argument)
 		progressIndicator = HapticCursor()
 		progressIndicator.start()
@@ -32,6 +33,14 @@ def Main():
 		machineCode = EncodeInstructions(thisProg, symTable)
 		GenHack(machineCode, progName)
 		progressIndicator.stop()
+		benchTime = str(time.clock() - benchmark)[0:6] + " seconds"
+		try:
+			print(progName + " encoded in: " + benchTime)
+			benchFile = open(progName + ".bench", 'a')
+			benchFile.write(progName + " compile time:\t" + benchTime + "\t\tat: " + str(time.asctime()) + "\n")
+			benchFile.close()
+		except: print(progName + " failed to record benchmark.")
+
 		argument += 1
 		if argument == len(sys.argv): break 
 
@@ -119,13 +128,13 @@ def Preparse(inFile):
 	thisList = []
 	rawInput = inFile.readlines()
 	for item in rawInput:
-		voids = ' \t\r\n'
 		remark = '//'
-		success = item.find(remark)
-		if success >= 0: item = item[0:success]
-		if item:
-			item = item.translate({ord(thisChar): None for thisChar in voids})
-			if len(item) > 0: thisList.append(item)
+		if remark in item:
+			directive, remark = item.split(remark)
+		else: directive = item
+		directive = directive.strip().replace('\t', '')
+		directive = directive.replace(' ', '')
+		if len(directive) > 0: thisList.append(directive)
 	return thisList
 
 def Sanity(arg):
@@ -139,7 +148,7 @@ class HapticCursor:
 	busy = False
 	@staticmethod
 	def current_cursor():
-		while 1: 
+		while True: 
 			for cursor in '\\-/|': yield cursor
 
 	def __init__(self, delay=None):
