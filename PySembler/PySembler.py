@@ -12,32 +12,37 @@
 #		Building a Modern Computer from First Principles
 #		by Noam Nisan & Shimon Schocken
 #
-import string, sys, time, threading
+import platform, string, sys, time, threading
+HAPTIC_INTERVAL = 0.6
 PLATFORM_BASE_REGISTER = 16
 PLATFORM_BIT_WIDTH = 16
 PLATFORM_FIRST_ARG = 1
-HAPTIC_INTERVAL = 0.6
+VERSION = "0.9.1"
 
 def Main():
 	argument = PLATFORM_FIRST_ARG
 	Sanity(argument)
 	while argument < len(sys.argv):
-		benchmark = time.clock()
+		benchmark = time.clock() # Benchmark setup.
 		progName = GetName(argument)
-		progressIndicator = HapticCursor()
+		progressIndicator = HapticCursor() # User-feedback.
 		progressIndicator.start()
-		thisProg = Preparse(open(sys.argv[argument],'r'))
+		thisProg = Preparse(open(sys.argv[argument],'r')) # Parse input.
 		symTable = InitSymbols() 
-		symTable = LinkLabels(thisProg, symTable)
-		symTable = LinkVariables(thisProg, symTable)
-		machineCode = EncodeInstructions(thisProg, symTable)
-		GenHack(machineCode, progName)
+		symTable = LinkLabels(thisProg, symTable) # Pass One.
+		symTable = LinkVariables(thisProg, symTable) # Pass Two...
+		machineCode = EncodeInstructions(thisProg, symTable) # ...Pass Two.
+		GenHack(machineCode, progName) # Output file.
 		progressIndicator.stop()
-		benchTime = str(time.clock() - benchmark)[0:6] + " seconds"
+
+		# Benchmarking
+		benchTime = str(time.clock() - benchmark)[0:6] + " sec."
 		try:
-			print(progName + " encoded in: " + benchTime)
+			print(progName + " encoded in: " + benchTime) # info
 			benchFile = open(progName + ".bench", 'a')
-			benchFile.write(progName + " compile time:\t" + benchTime + "\t\tat: " + str(time.asctime()) + "\n")
+			benchFile.write(progName + " in: "  + benchTime + ", with: " + 
+				   VERSION + ", on: " + platform.system() +"(" + 
+				   platform.release() + ")" + ", at: " + str(time.asctime()) + "\r\n")
 			benchFile.close()
 		except: print(progName + " failed to record benchmark.")
 
@@ -125,17 +130,15 @@ def LinkVariables(thisList, symTable):
 	return symTable
 
 def Preparse(inFile):
-	thisList = []
+	directiveList = []
 	rawInput = inFile.readlines()
-	for item in rawInput:
-		remark = '//'
-		if remark in item:
-			directive, remark = item.split(remark)
-		else: directive = item
+	for directive in rawInput:
+		if '//' in directive:
+			directive, remark = directive.split('//')
 		directive = directive.strip().replace('\t', '')
 		directive = directive.replace(' ', '')
-		if len(directive) > 0: thisList.append(directive)
-	return thisList
+		if len(directive) > 0: directiveList.append(directive)
+	return directiveList
 
 def Sanity(arg):
 	if len(sys.argv) <= arg or sys.argv[arg] == "help": Usage()
@@ -144,32 +147,32 @@ def Usage():
 	print ("\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
 
 class HapticCursor:
-	delay = HAPTIC_INTERVAL
-	busy = False
+	interval = HAPTIC_INTERVAL
+	active = False
 	@staticmethod
 	def current_cursor():
 		while True: 
 			for cursor in '\\-/|': yield cursor
 
-	def __init__(self, delay=None):
+	def __init__(self, interval=None):
 		self.cursor = self.current_cursor()
-		if delay and float(delay): self.delay = float(delay)
+		if interval and float(interval): self.interval = float(interval)
 
 	def haptic_task(self):
-		while self.busy:
+		while self.active:
 			sys.stdout.write(next(self.cursor))
 			sys.stdout.flush()
-			time.sleep(self.delay)
+			time.sleep(self.interval)
 			sys.stdout.write('\b')
 			sys.stdout.flush()
 
 	def start(self):
-		self.busy = True
+		self.active = True
 		threading.Thread(target=self.haptic_task).start()
 
 	def stop(self):
-		self.busy = False
-		time.sleep(self.delay)
+		self.active = False
+		time.sleep(self.interval)
 
 ## DATA TABLES
 def EncodeComp(strIn):
