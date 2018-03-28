@@ -20,34 +20,33 @@ PLATFORM_FIRST_ARG = 1
 VERSION = "0.9.1"
 
 def Main():
-	argument = PLATFORM_FIRST_ARG
-	Sanity(argument)
+	argument = PLATFORM_FIRST_ARG # Batch control
+	SanityCheck(argument) # Quality assurance (TODO: check for valid input)
+
 	while argument < len(sys.argv):
 		benchmark = time.clock() # Benchmark setup.
-		progName = GetName(argument)
+		romName = GetName(argument) 
+		print(romName + " encoding...")
 		progressIndicator = HapticCursor() # User-feedback.
 		progressIndicator.start()
-		thisProg = Preparse(open(sys.argv[argument],'r')) # Parse input.
-		symTable = InitSymbols() 
-		symTable = LinkLabels(thisProg, symTable) # Pass One.
-		symTable = LinkVariables(thisProg, symTable) # Pass Two...
-		machineCode = EncodeInstructions(thisProg, symTable) # ...Pass Two.
-		GenHack(machineCode, progName) # Output file.
+		thisRom = Preparse(open(sys.argv[argument],'r')) # Parse input.
+		symTable = InitSymbols()
+		symTable = LinkLabels(thisRom, symTable) # Pass One.
+		symTable = LinkVariables(thisRom, symTable) # Pass Two...
+		machineCode = EncodeInstructions(thisRom, symTable) # ...Pass Two.
+		GenHack(machineCode, romName) # Output file.
 		progressIndicator.stop()
-
-		# Benchmarking
 		benchTime = str(time.clock() - benchmark)[0:6] + " sec."
 		try:
-			print(progName + " encoded in: " + benchTime) # info
-			benchFile = open(progName + ".bench", 'a')
-			benchFile.write(progName + " in: "  + benchTime + ", with: " + 
-				   VERSION + ", on: " + platform.system() +"(" + 
+			print(romName + " encoded in: " + benchTime) # info
+			benchFile = open(romName + ".bench", 'a')
+			benchFile.write(romName + " in: "  + benchTime + ", with: " +
+				   VERSION + ", on: " + platform.system() +"(" +
 				   platform.release() + ")" + ", at: " + str(time.asctime()) + "\r\n")
 			benchFile.close()
-		except: print(progName + " failed to record benchmark.")
-
+		except: print(romName + " failed to record benchmark.")
 		argument += 1
-		if argument == len(sys.argv): break 
+		if argument == len(sys.argv): sys.exit(0)
 
 def AsInteger(strIn):
 	if strIn.isdigit():	return int(strIn)
@@ -55,7 +54,8 @@ def AsInteger(strIn):
 
 def EncodeInstructions(thisList, symTable):
 	instructionList = []
-	instructionCount = 0
+	romAddress = 0
+	zip = "0" * PLATFORM_BIT_WIDTH
 	for line in thisList:
 		if line[0] == '@':
 			address = line[1:]
@@ -63,13 +63,12 @@ def EncodeInstructions(thisList, symTable):
 			if addressAsInteger >= 0: address = addressAsInteger
 			else: address = symTable[address]
 			encodedAddress = str(bin(address))[2:]
-			zip = "0" * PLATFORM_BIT_WIDTH
 			addressBits = len(encodedAddress)
 			if addressBits < len(zip):
 				offset = len(zip) - addressBits
 				encodedAddress = zip[0:offset] + encodedAddress
 			instructionList.append(encodedAddress)
-			instructionCount += 1
+			romAddress += 1
 		elif not line[0] == '(':
 			dcCode = line
 			jumpInstruction = ';'
@@ -85,9 +84,9 @@ def EncodeInstructions(thisList, symTable):
 				dCode = EncodeDest(dcCode[0:success])
 			else:
 				cCode = EncodeComp(dcCode[success + 1:])
-				dCode = "000"	
+				dCode = "000"
 			instructionList.append("111" + cCode + dCode + jCode)
-			instructionCount += 1
+			romAddress += 1
 	return instructionList
 
 def GenHack(machineCode, progName):
@@ -99,34 +98,32 @@ def GetName(arg):
 	delimiter = '.'
 	thisArg = sys.argv[arg]
 	success = thisArg.find(delimiter)
-	if success >= 1: 
-		progName = thisArg[0:success]
-		print ("Processing: " + progName) # info
-		return progName
+	if success >= 1:
+		return thisArg[0:success]
 
 def LinkLabels(thisList, symTable):
-	symbolOffset = 0
-	isSymbol = False
+	romAddress = 0
 	for line in thisList:
-		if line[0] == '(' and line[-1] == ')':
-			isSymbol = True
-			if not line[1:-1] in symTable.keys(): symTable[line[1:-1]] = symbolOffset 
-		if not isSymbol: symbolOffset += 1
 		isSymbol = False
+		if line[0] == '(':
+			isSymbol = True
+			label = line[1:-1]
+			if not label in symTable.keys(): symTable[label] = romAddress
+		if not isSymbol: romAddress += 1
 	return symTable
 
 def LinkVariables(thisList, symTable):
-	instructionOffset = 0
+	romAddress = 0
 	nextOpenRegister = PLATFORM_BASE_REGISTER
 	for line in thisList:
 		if line[0] == '@':
 			address = line[1:]
 			addressAsInteger = AsInteger(address)
-			if addressAsInteger < 0:						
-				if not address in symTable.keys(): 
+			if addressAsInteger < 0:
+				if not address in symTable.keys():
 					symTable[address] = nextOpenRegister
-					nextOpenRegister += 1	
-				if not line[0] == '(': instructionOffset += 1
+					nextOpenRegister += 1
+				if not line[0] == '(': romAddress += 1
 	return symTable
 
 def Preparse(inFile):
@@ -140,18 +137,18 @@ def Preparse(inFile):
 		if len(directive) > 0: directiveList.append(directive)
 	return directiveList
 
-def Sanity(arg):
-	if len(sys.argv) <= arg or sys.argv[arg] == "help": Usage()
-
-def Usage():
+def PrintUsage():
 	print ("\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
+
+def SanityCheck(arg):
+	if len(sys.argv) <= arg or sys.argv[arg] == "help": PrintUsage()
 
 class HapticCursor:
 	interval = HAPTIC_INTERVAL
 	active = False
 	@staticmethod
 	def current_cursor():
-		while True: 
+		while True:
 			for cursor in '\\-/|': yield cursor
 
 	def __init__(self, interval=None):
@@ -176,10 +173,10 @@ class HapticCursor:
 
 ## DATA TABLES
 def EncodeComp(strIn):
-	compCodes = {"0":"0101010", "1":"0111111", "-1":"0111010", "D":"0001100", 
+	compCodes = {"0":"0101010", "1":"0111111", "-1":"0111010", "D":"0001100",
 			"A":"0110000", "!D":"0001101", "!A":"0110001", "-D":"0001111",
 			"-A":"0110011", "D+1":"0011111", "A+1":"0110111", "D-1":"0001110",
-			"A-1":"0110010", "D+A":"0000010", "A+D":"0000010", "D-A":"0010011", 
+			"A-1":"0110010", "D+A":"0000010", "A+D":"0000010", "D-A":"0010011",
 			"A-D":"0000111", "D&A":"0000000", "D|A":"0010101", "A&D":"0000000",
 			"A|D":"0010101", "M":"1110000", "!M":"1110001", "-M":"1110011",
 			"M+1":"1110111", "M-1":"1110010", "D+M":"1000010", "M+D":"1000010",
@@ -189,20 +186,20 @@ def EncodeComp(strIn):
 
 def EncodeDest(strIn):
 	destA = destD = destM = "0"
-	if "A" in strIn: destA = "1" 
+	if "A" in strIn: destA = "1"
 	if "D" in strIn: destD = "1"
 	if "M" in strIn: destM = "1"
 	return str(destA + destD + destM)
 
 def EncodeJump(strIn):
-	jumpCodes = {"JGT":"001", "JEQ":"010",  "JGE":"011",  "JLT":"100",  
+	jumpCodes = {"JGT":"001", "JEQ":"010",  "JGE":"011",  "JLT":"100",
 		  "JNE":"101",  "JLE":"110",  "JMP":"111"}
 	return jumpCodes.get(strIn, "000")
 
 def InitSymbols():
-	table =  {"SP":0, "LCL":1, "ARG":2, "THIS":3, "THAT":4, "SCREEN":16384, 
-		  "KBD":24576, "R0":0, "R1":1, "R2":2, "R3":3, "R4":4, "R5":5, 
-		  "R6":6, "R7":7, "R8":8, "R9":9, "R10":10, "R11":11, "R12":12, 
+	table =  {"SP":0, "LCL":1, "ARG":2, "THIS":3, "THAT":4, "SCREEN":16384,
+		  "KBD":24576, "R0":0, "R1":1, "R2":2, "R3":3, "R4":4, "R5":5,
+		  "R6":6, "R7":7, "R8":8, "R9":9, "R10":10, "R11":11, "R12":12,
 		  "R13":13, "R14":14, "R15":15 }
 	return table
 
