@@ -17,25 +17,45 @@ HAPTIC_INTERVAL = 0.6
 PLATFORM_BASE_REGISTER = 16
 PLATFORM_BIT_WIDTH = 16
 PLATFORM_FIRST_ARG = 1
-VERSION = "0.9.1"
+VERSION = "0.9.2"
 
 def Main():
-	argument = PLATFORM_FIRST_ARG # Batch control
-	SanityCheck(argument) # Quality assurance (TODO: check for valid input)
+	# Initialize que.
+	argument = PLATFORM_FIRST_ARG
+	queSize = len(sys.argv)
 
-	while argument < len(sys.argv):
-		benchmark = time.clock() # Benchmark setup.
-		romName = GetName(argument) 
-		print(romName + " encoding...")
-		progressIndicator = HapticCursor() # User-feedback.
+	# Encode batch member.
+	while argument < queSize:
+		# Select (next) assembly from the que.
+		qued = sys.argv[argument]
+
+		# Benchmark setup.
+		benchmark = time.clock()
+
+		# ID qued ROM.
+		romName = GetName(argument)
+
+		# User-feedback.
+		print(romName + " encoding...") # info
+		progressIndicator = HapticCursor()
 		progressIndicator.start()
-		thisRom = Preparse(open(sys.argv[argument],'r')) # Parse input.
+
+		# Parse input (remove comments and whitespace).
+		thisRom = Preparse(open(qued,'r'))
+
+		# Pass one (link labels in symTable).
 		symTable = InitSymbols()
-		symTable = LinkLabels(thisRom, symTable) # Pass One.
-		symTable = LinkVariables(thisRom, symTable) # Pass Two...
-		machineCode = EncodeInstructions(thisRom, symTable) # ...Pass Two.
-		GenHack(machineCode, romName) # Output file.
+		symTable = LinkLabels(thisRom, symTable)
+
+		# Pass two (link variables in symTable & encode directives).
+		symTable = LinkVariables(thisRom, symTable)
+		machineCode = EncodeInstructions(thisRom, symTable)
+
+		# Output .hack file.
+		GenHack(machineCode, romName)
 		progressIndicator.stop()
+
+		# Benchmarking:
 		benchTime = str(time.clock() - benchmark)[0:6] + " sec."
 		try:
 			print(romName + " encoded in: " + benchTime) # info
@@ -44,9 +64,8 @@ def Main():
 				   VERSION + ", on: " + platform.system() +"(" +
 				   platform.release() + ")" + ", at: " + str(time.asctime()) + "\r\n")
 			benchFile.close()
-		except: print(romName + " failed to record benchmark.")
+		except: print(romName + " WARNING: unable to record benchmark.")
 		argument += 1
-		if argument == len(sys.argv): sys.exit(0)
 
 def AsInteger(strIn):
 	if strIn.isdigit():	return int(strIn)
@@ -137,11 +156,17 @@ def Preparse(inFile):
 		if len(directive) > 0: directiveList.append(directive)
 	return directiveList
 
-def PrintUsage():
+def PrintUsage(exitCode):
 	print ("\nUSAGE: PySembler.py fileOne.asm [fileTwo.asm ... fileEn.asm]\n")
+	sys.exit(exitCode)
 
-def SanityCheck(arg):
-	if len(sys.argv) <= arg or sys.argv[arg] == "help": PrintUsage()
+def Start():
+	if len(sys.argv) <= 1 or sys.argv[1] == "help": 
+		PrintUsage(1)
+	try: Main()
+	except:
+		print("FAIL -- unable to parse input: " + str(sys.argv))
+		PrintUsage(9)
 
 class HapticCursor:
 	interval = HAPTIC_INTERVAL
@@ -203,4 +228,4 @@ def InitSymbols():
 		  "R13":13, "R14":14, "R15":15 }
 	return table
 
-Main()
+Start()
