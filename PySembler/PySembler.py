@@ -76,17 +76,15 @@ def EncodeInstructions(thisList, symTable):
 	zip = "0" * PLATFORM_BIT_WIDTH
 	for line in thisList:
 		if line[0] == '@':
-			address = line[1:]
-			addressAsInteger = AsInteger(address)
+			addressAsInteger = AsInteger(line[1:])
 			if addressAsInteger >= 0: address = addressAsInteger
-			else: address = symTable[address]
+			else: address = symTable[line[1:]]
 			encodedAddress = str(bin(address))[2:]
 			addressBits = len(encodedAddress)
 			if addressBits < len(zip):
 				offset = len(zip) - addressBits
 				encodedAddress = zip[0:offset] + encodedAddress
 			instructionList.append(encodedAddress)
-			romAddress += 1
 		elif not line[0] == '(':
 			jCode = "000"
 			dcCode = line
@@ -94,17 +92,12 @@ def EncodeInstructions(thisList, symTable):
 			if jump > 0:
 				dcCode, j = line.split(';')
 				jCode = EncodeJump(j)
-				print(j + " " + jCode)
-
 			assignment = dcCode.find('=')
-			if assignment > 0:
-				cCode = EncodeComp(dcCode[assignment + 1:])
-				dCode = EncodeDest(dcCode[0:assignment])
-			else:
-				cCode = EncodeComp(dcCode[assignment + 1:])
-				dCode = "000"
+			cCode = EncodeComp(dcCode[assignment + 1:])
+			if assignment > 0: dCode = EncodeDest(dcCode[0:assignment])
+			else: dCode = "000"
 			instructionList.append("111" + cCode + dCode + jCode)
-			romAddress += 1
+		romAddress += 1
 	return instructionList
 
 def GenHack(machineCode, progName):
