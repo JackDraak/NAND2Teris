@@ -17,7 +17,7 @@ HAPTIC_INTERVAL = 0.6
 PLATFORM_BASE_REGISTER = 16
 PLATFORM_BIT_WIDTH = 16
 PLATFORM_FIRST_ARG = 1
-VERSION = "0.9.2"
+VERSION = "0.9.3"
 
 def Main():
 	# Initialize que.
@@ -51,18 +51,17 @@ def Main():
 		symTable = LinkVariables(thisRom, symTable)
 		machineCode = EncodeInstructions(thisRom, symTable)
 
-		# Output .hack file.
+		# Output machine-language file.
 		GenHack(machineCode, romName)
 		progressIndicator.stop()
 
 		# Benchmarking:
-		benchTime = str(time.clock() - benchmark)[0:6] + " sec."
+		benchTime = str(time.clock() - benchmark)[0:6]
+		benchOut = "{} in: {}, with: {}, on: {}({}), at: {}" .format(romName, benchTime, VERSION, platform.system(), platform.release(), str(time.asctime()))
 		try:
 			print(romName + " encoded in: " + benchTime) # info
 			benchFile = open(romName + ".bench", 'a')
-			benchFile.write(romName + " in: "  + benchTime + ", with: " +
-				   VERSION + ", on: " + platform.system() +"(" +
-				   platform.release() + ")" + ", at: " + str(time.asctime()) + "\r\n")
+			benchFile.write(str(benchTime + "\n")) # NB fix this
 			benchFile.close()
 		except: print(romName + " WARNING: unable to record benchmark.")
 		argument += 1
@@ -89,20 +88,20 @@ def EncodeInstructions(thisList, symTable):
 			instructionList.append(encodedAddress)
 			romAddress += 1
 		elif not line[0] == '(':
+			jCode = "000"
 			dcCode = line
-			jumpInstruction = ';'
-			success = line.find(jumpInstruction)
-			if success >= 0: 
-				dcCode = line[0:success]
-				jCode = EncodeJump(line[success + 1:])
-			else: jCode = "000"
-			assignment = '='
-			success = dcCode.find(assignment)
-			if success > 0:
-				cCode = EncodeComp(dcCode[success + 1:])
-				dCode = EncodeDest(dcCode[0:success])
+			jump =  line.find(';')
+			if jump > 0:
+				dcCode, j = line.split(';')
+				jCode = EncodeJump(j)
+				print(j + " " + jCode)
+
+			assignment = dcCode.find('=')
+			if assignment > 0:
+				cCode = EncodeComp(dcCode[assignment + 1:])
+				dCode = EncodeDest(dcCode[0:assignment])
 			else:
-				cCode = EncodeComp(dcCode[success + 1:])
+				cCode = EncodeComp(dcCode[assignment + 1:])
 				dCode = "000"
 			instructionList.append("111" + cCode + dCode + jCode)
 			romAddress += 1
@@ -132,7 +131,6 @@ def LinkLabels(thisList, symTable):
 	return symTable
 
 def LinkVariables(thisList, symTable):
-	romAddress = 0
 	nextOpenRegister = PLATFORM_BASE_REGISTER
 	for line in thisList:
 		if line[0] == '@':
@@ -142,7 +140,6 @@ def LinkVariables(thisList, symTable):
 				if not address in symTable.keys():
 					symTable[address] = nextOpenRegister
 					nextOpenRegister += 1
-				if not line[0] == '(': romAddress += 1
 	return symTable
 
 def Preparse(inFile):
