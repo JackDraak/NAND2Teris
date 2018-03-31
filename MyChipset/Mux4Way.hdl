@@ -11,7 +11,7 @@ CHIP Mux4Way {
     OUT out;
 
 PARTS:
-	Mux(a=a, b=c, out=outac, sel=sel[0]);
-	Mux(a=b, b=d, out=outbd, sel=sel[0]);
-	Mux(a=outac, b=outbd, out=out, sel=sel[1]);
+	Mux(a=a, b=b, out=outab, sel=sel[0]);
+	Mux(a=c, b=d, out=outcd, sel=sel[0]);
+	Mux(a=outab, b=outcd, out=out, sel=sel[1]);
 }

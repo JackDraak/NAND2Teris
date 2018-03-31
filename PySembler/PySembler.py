@@ -127,11 +127,10 @@ def LinkVariables(thisList, symTable):
 	nextOpenRegister = PLATFORM_BASE_REGISTER
 	for line in thisList:
 		if line[0] == '@':
-			address = line[1:]
-			addressAsInteger = AsInteger(address)
+			addressAsInteger = AsInteger(line[1:])
 			if addressAsInteger < 0:
-				if not address in symTable.keys():
-					symTable[address] = nextOpenRegister
+				if not line[1:] in symTable.keys():
+					symTable[line[1:]] = nextOpenRegister
 					nextOpenRegister += 1
 	return symTable
 
@@ -141,8 +140,7 @@ def Preparse(inFile):
 	for directive in rawInput:
 		if '//' in directive:
 			directive, remark = directive.split('//')
-		directive = directive.strip().replace('\t', '')
-		directive = directive.replace(' ', '')
+		directive = directive.strip().replace('\t', '').replace(' ', '')
 		if len(directive) > 0: directiveList.append(directive)
 	return directiveList
 
