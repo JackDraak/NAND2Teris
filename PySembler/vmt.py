@@ -86,6 +86,7 @@ class MemoryAccess:
 		self.directive = a
 		self.segment = b
 		self.index = c
+		# segments: static, this, local, argument, that, constant, pointer, temp
 
 	
 def CodeWriter(maIn):
