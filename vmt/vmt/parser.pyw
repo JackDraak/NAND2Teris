@@ -53,21 +53,32 @@ class Parser:
 		if hasMoreCommands:
 			index += 1
 
-	# C_ARITHMETIC, C_PUSH, C_POP, C_LABEL, C_GOTO, C_IF, C_FUNCTION, C_RETURN, C_CALL
 	def commandType():
+		args = operator.itemgetter(index)(iStream)
+
 		return "C_ARITHMETIC"
 
 	# Should not be called if the current command is C_RETURN.
 	def arg1():
-		arg1 = operator.itemgetter(index)(iStream)
-		if ' ' in arg1: arg1, arg2, arg3 = directive.split(' ')
+		args = operator.itemgetter(index)(iStream)
+		if ' ' in arg1: directive, arg1, arg2 = directive.split(' ')
 		return arg1
 
 	# Should be called only if the current command is C_PUSH, C_POP, C_FUNCTION, or C_CALL.
 	def arg2():
-		arg2 = operator.itemgetter(index)(iStream)
-		if ' ' in arg1: arg1, arg2, arg3 = directive.split(' ')
+		args = operator.itemgetter(index)(iStream)
+		directive, arg1, arg2 = directive.split(' ')
 		return arg2
+
+	def commandTable(strIn):
+		maths = "C_ARITHMETIC"
+		commands = {"add":maths, "sub":maths, "neg":maths, "eq":maths, 
+			 "gt":maths, "lt":maths, "and":maths, "or":maths, "not":maths,
+			 "pop":"C_POP", "push":"C_PUSH", "label":"C_LABEL", "goto":"C_GOTO",
+			 "if-goto":"C_IF", "function":"C_FUNCTION", "call":"C_CALL",
+			  "return":"C_RETURN",}
+		return jumpCodes.get(strIn, "000")
+
 
 class MemoryAccess:
 	def __init__(self, a = "", b = "", c = 0):
