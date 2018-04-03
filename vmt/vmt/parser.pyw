@@ -3,12 +3,14 @@
 #	@author	JackDraak
 #	
 import operator, string, sys
+VERSION = "0.0.1"
 
 class Parser:
 	iStream = []
 	iLength = 0
 	index = -1
 
+	#@staticmethod
 	def Constructor(vmFile):
 		rawInput = vmFile.readlines()
 		for directive in rawInput:

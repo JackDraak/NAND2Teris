@@ -20,7 +20,14 @@
 #			pointer (to base) stored in RAM[]:, LCL, ARG, THIS, THAT
 #			therefore argument.7 is accessed as RAM[ARG + 7]
 
-import string, sys, parser #, codewriter
+import string, sys, parser, codewriter
 VERSION = "0.0.1"
 
-parser.
+w = codewriter
+r = parser
+
+w.CodeWriter.setFilename("fileName_test")
+w.CodeWriter.Constructor("oFile_test")
+w.CodeWriter.writeArithmetic("C_PUSH")
+
+#r.Parser.Constructor(vmFile)

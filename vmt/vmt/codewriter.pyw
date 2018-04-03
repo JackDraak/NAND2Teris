@@ -1,7 +1,51 @@
 #!/usr/bin/env python
 #
 #	@author	JackDraak
-#	
+#
+import string, sys
+VERSION = "0.0.1"
+
+class CodeWriter:
+	fileName = None
+	oFile = None
+	oStream = []
+
+	def setFilename(strIn):
+		fileName = strIn
+
+	def Constructor():
+		oFile = open(fileName, 'w')
+
+	def Close():
+		oFile.close()
+
+	def writePushPop(command, segment, index):
+		if command is "C_PUSH":
+			oFile.write("@" + segment + "." + str(index))
+		# TODO: more stuff here -- POP
+
+	def writeArithmetic(directive):
+		c_add = """// add
+		@SP
+		A=M		// Fetch SP pointer
+		M=A-1	// Decrement SP
+		D=M		// Fetch top of stack (Y)
+		@SP
+		M=M+D	// X+Y, left in top of stack
+		"""
+		c_sub = """// sub
+		@SP 
+		A=M		// Fetch SP pointer
+		M=A-1	// Decrement SP
+		D=M		// Fetch top of stack (Y)
+		@SP
+		M=M-D	// X-Y, left in top of stack
+		"""
+		# TODO: more stuff here -- add, sub, neg, eq, gt, lt, and, or, not
+		commands = {"add":c_add, "sub":c_sub}
+		oFile.write(commands.get(strIn, None))
+
+
 '''	Notes from the Chapter 7 Slides available online at nand2tetris.orc (see: course)
 
 CODEWRITER: Translates VM commands into Hack assembly code.
@@ -21,12 +65,3 @@ WritePushPop		cmd (C_PUSH|C_POP),		--					Writes the assembly code that is the t
 Close				--						--					Closes the output file.
 
 '''
-import string, sys
-
-def Start():
-	if len(sys.argv) <= 1 or sys.argv[1] == "help": 
-		PrintUsage(1)
-	try: Main()
-	except:
-		print("FAIL -- unable to parse input: " + str(sys.argv))
-		PrintUsage(9)
