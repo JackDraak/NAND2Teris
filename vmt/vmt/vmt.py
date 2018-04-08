@@ -63,8 +63,8 @@ class CodeWriter(object):
 	def setFilename(self, strIn):
 		self.fileName = strIn
 
-	def Constructor(self, fileName):
-		self.oFile = open(self.fileName, 'w')
+	def Constructor(self):
+		self.oFile = open(self.fileName + "asm", 'w')
 
 	def Close(self):
 		self.oFile.close()
@@ -124,6 +124,7 @@ class Parser(object):
 	def advance(self):
 		if self.hasMoreCommands(self):
 			self.index += 1
+			print(self.index)
 
 	def commandType(self):
 		directive = operator.itemgetter(self.index)(self.iStream)
@@ -179,7 +180,7 @@ while cue <= len(sys.argv):
 	r = Parser
 
 	w.setFilename(w, name)
-	w.Constructor(w, w.fileName + ".asm")
+	w.Constructor(w)
 	#w.writeArithmetic("add")
 
 	r.Constructor(r, qued)
