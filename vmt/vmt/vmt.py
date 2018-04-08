@@ -24,26 +24,26 @@ import string, sys#, parser, codewriter
 VERSION = "0.0.1"
 
 class CodeWriter:
-	fileName = "fileName_default"
-	oFile = "oFile_default"
-	oStream = []
-	oStream.append("oStream")
-	oStream.append("default")
+	"""VM -> Assembly encoder"""
+	global fileName
+	global oFile
+	global oStream
 
-	def __init__(self, fileName="", oFile="", oStream=[]):
-		self.fileName = "fileName_d"
-		self.oFile = "oFile_d"
-		self.oStream = []
-		self.oStream.append("oStream")
-		self.oStream.append("default")
+	def __init__(self, fileName, oFile, oStream):
+		self.fileName = fileName
+		self.oFile = oFile
+		self.oStream = oStream
 
 	def setFilename(strIn):
+		global fileName
 		fileName = strIn
 
 	def Constructor(fileName):
+		global oFile
 		oFile = open(fileName, 'w')
 
 	def Close():
+		global oFile
 		oFile.close()
 
 	def writePushPop(command, segment, index):
@@ -53,46 +53,63 @@ class CodeWriter:
 
 	def writeArithmetic(directive):
 		c_add = """// add
-		@SP
-		A=M		// Fetch SP pointer
-		M=A-1	// Decrement SP
-		D=M		// Fetch top of stack (Y)
-		@SP
-		M=M+D	// X+Y, left in top of stack
-		"""
+@SP
+A=M		// Fetch SP pointer
+M=A-1	// Decrement SP
+D=M		// Fetch top of stack (Y)
+@SP
+M=M+D	// X+Y, left in top of stack
+"""
 		c_sub = """// sub
-		@SP 
-		A=M		// Fetch SP pointer
-		M=A-1	// Decrement SP
-		D=M		// Fetch top of stack (Y)
-		@SP
-		M=M-D	// X-Y, left in top of stack
-		"""
+@SP 
+A=M		// Fetch SP pointer
+M=A-1	// Decrement SP
+D=M		// Fetch top of stack (Y)
+@SP
+M=M-D	// X-Y, left in top of stack
+"""
 		# TODO: more stuff here -- add, sub, neg, eq, gt, lt, and, or, not
 		commands = {"add":c_add, "sub":c_sub}
-		oFile.write(commands.get(strIn, None))
+		oFile.write(commands.get(directive, None))
+		#oFile.write(c_add)
 
 class Parser:
-	iStream = []
-	iLength = 0
-	index = -1
+	"""Parser of VM code"""
+	def __init__(self, iStream, iLength, index):
+		self.iStream = iStream
+		self.iLength = iLength
+		self.index = index
+	
+	#global iStream
+	#global iLength
+	#global index
+	self.iStream = []
+	self.iLength = 0
+	self.index = -1
 
 	#@staticmethod
 	def Constructor(vmFile):
-		rawInput = vmFile.readlines()
+		#global iLength
+		fh = open(vmFile, 'r')
+		rawInput = fh.readlines()
 		for directive in rawInput:
 			if '//' in directive:
 				directive, remark = directive.split('//')
-			directive = directive.strip().replace('\t' ' ')
+			directive = directive.strip()
 			if len(directive) > 0: 
-				iStream.append(directive)
-				iLength += 1
+				directive = directive.replace('\t', ' ')
+				self.iStream.append(directive)
+				self.iLength += 1
 
 	def hasMoreCommands():
+		global index
+		global iLength
 		return index < iLength
 
 	def advance():
-		if hasMoreCommands:
+		global index
+
+		if Parser.hasMoreCommands():
 			index += 1
 
 	def commandType():
@@ -132,13 +149,29 @@ class Parser:
 			 "if-goto":"C_IF", "function":"C_FUNCTION", "call":"C_CALL",
 			  "return":"C_RETURN",}
 		return commands.get(strIn, None)
-	
 
-w = CodeWriter
-r = Parser
+global cue
+cue = 1
+while cue <= len(sys.argv):
+	qued = sys.argv[cue]
+	name = "name_def"
+	extenstion = "x"
+	try:
+		name, extension = qued.split('.')
+	except:
+		print("argument error")
 
-w.setFilename("fileName_test")
-w.Constructor("oFile_test")
-w.writeArithmetic("C_PUSH")
+	w = CodeWriter
+	r = Parser
 
-#r.Parser.Constructor(vmFile)
+	w.setFilename(name)
+	w.Constructor(fileName + ".asm")
+	#w.writeArithmetic("add")
+
+	r.Constructor(qued)
+	if r.hasMoreCommands():
+		print(r.commandType)
+		r.advance()
+
+else:
+	print("Usage:")
