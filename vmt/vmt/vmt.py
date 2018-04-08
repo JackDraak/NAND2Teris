@@ -104,9 +104,12 @@ class Parser(object):
 		self.iStream = []
 
 	def Constructor(self, vmFile):
-		self.iLength = 0
-		self.index = -1
-		self.iStream = []
+		try:
+			print(self.index)
+		except:
+			self.iLength = 0
+			self.index = -1
+			self.iStream = []
 		fh = open(vmFile, 'r')
 		rawInput = fh.readlines()
 		for directive in rawInput:
@@ -117,6 +120,7 @@ class Parser(object):
 				directive = directive.replace('\t', ' ')
 				self.iStream.append(directive)
 				self.iLength += 1
+		return self
 
 	def hasMoreCommands(self):
 		return self.index < self.iLength
@@ -125,6 +129,7 @@ class Parser(object):
 		if self.hasMoreCommands(self):
 			self.index += 1
 			print(self.index) # debug: note, index is stuck at 0
+		return self.index
 
 	def commandType(self):
 		directive = operator.itemgetter(self.index)(self.iStream)
@@ -189,6 +194,7 @@ while cue <= len(sys.argv):
 		r.advance(r) # this isn't working?
 		r.index += 1
 		print(str(r.index) + " our index")
+
 
 else:
 	print("Usage:")
