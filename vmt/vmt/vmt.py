@@ -19,39 +19,9 @@
 #		local, argument, this, that: RAM[2048..+], 
 #			pointer (to base) stored in RAM[]:, LCL, ARG, THIS, THAT
 #			therefore argument.7 is accessed as RAM[ARG + 7]
-'''
-class SMSStore(object):
-    def __init__(self):
-        self.store = []
-        self.message_count = 0
-
-    def add_new_arrival(self,number,time,text):
-        self.store.append(("From: "+number, "Recieved: "+time,"Msg: "+text))
-        self.message_count += 1
-
-    def delete(self, i):
-        if i >= len(store):
-            raise IndexError
-        else:
-            del self.store[i]
-            self.message_count -= 1
-
-sms_store = SMSStore()
-sms_store.add_new_arrival("1234", "now", "lorem ipsum")
-try:
-    sms_store.delete(20)
-except IndexError:
-    print("Index does not exist")
-
-print sms_store.store
-
-# multiple separate stores
-sms_store2 = SMSStore()
-sms_store2.add_new_arrival("4321", "then", "lorem ipsum")
-print sms_store2.store
-'''
-import string, sys, operator#, parser, codewriter
-VERSION = "0.0.1"
+#
+import string, sys, operator
+VERSION = "0.0.11"
 
 class CodeWriter(object):
 	"""VM -> Assembly encoder"""
@@ -64,7 +34,7 @@ class CodeWriter(object):
 		self.fileName = strIn
 
 	def Constructor(self):
-		self.oFile = open(self.fileName + "asm", 'w')
+		self.oFile = open(self.fileName + ".asm", 'w')
 
 	def Close(self):
 		self.oFile.close()
@@ -94,7 +64,6 @@ M=M-D	// X-Y, left in top of stack
 		# TODO: more stuff here -- add, sub, neg, eq, gt, lt, and, or, not
 		commands = {"add":c_add, "sub":c_sub}
 		self.oFile.write(commands.get(directive, None))
-		#oFile.write(c_add)
 
 class Parser(object):
 	"""Parser of VM code"""
@@ -110,32 +79,34 @@ class Parser(object):
 			self.iLength = 0
 			self.index = -1
 			self.iStream = []
-		fh = open(vmFile, 'r')
-		rawInput = fh.readlines()
-		for directive in rawInput:
-			if '//' in directive:
-				directive, remark = directive.split('//')
-			directive = directive.strip()
-			if len(directive) > 0: 
-				directive = directive.replace('\t', ' ')
-				self.iStream.append(directive)
-				self.iLength += 1
+			fh = open(vmFile, 'r')
+			rawInput = fh.readlines()
+			for directive in rawInput:
+				if '//' in directive:
+					directive, remark = directive.split('//')
+				directive = directive.strip()
+				if len(directive) > 0: 
+					directive = directive.replace('\t', ' ')
+					self.iStream.append(directive)
+					self.iLength += 1
+				print(self.iLength) # debug
 		return self
 
 	def hasMoreCommands(self):
-		return self.index < self.iLength
+		return self.index <= self.iLength
 
 	def advance(self):
 		if self.hasMoreCommands(self):
 			self.index += 1
-			print(self.index) # debug: note, index is stuck at 0
 		return self.index
 
 	def commandType(self):
-		directive = operator.itemgetter(self.index)(self.iStream)
-		if ' ' in directive: 
-			try: directive, arg1, arg2 = directive.split(' ')
-			except: print(".commandType() exception")
+		if self.hasMoreCommands(self):
+			print("ctype index: " + str(self.index))
+			directive = operator.itemgetter(self.index)(self.iStream)
+			if ' ' in directive: 
+				try: directive, arg1, arg2 = directive.split(' ')
+				except: print(".commandType() exception")
 		return self.commandTable(directive)
 
 	# Should not be called if the current command is C_RETURN.
@@ -169,7 +140,6 @@ class Parser(object):
 			  "return":"C_RETURN",}
 		return commands.get(strIn, None)
 
-
 global cue
 cue = 1
 while cue <= len(sys.argv):
@@ -186,15 +156,11 @@ while cue <= len(sys.argv):
 
 	w.setFilename(w, name)
 	w.Constructor(w)
-	#w.writeArithmetic("add")
-
 	r.Constructor(r, qued)
+
 	if r.hasMoreCommands(r):
+		# TODO: do stuff here
 		print(r.commandType(r))
-		r.advance(r) # this isn't working?
-		r.index += 1
-		print(str(r.index) + " our index")
-
-
+		r.advance(r)
 else:
-	print("Usage:")
+	print("Usage: .....")
