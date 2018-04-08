@@ -25,25 +25,20 @@ VERSION = "0.0.1"
 
 class CodeWriter:
 	"""VM -> Assembly encoder"""
-	global fileName
-	global oFile
-	global oStream
-
-	def __init__(self, fileName, oFile, oStream):
-		self.fileName = fileName
-		self.oFile = oFile
-		self.oStream = oStream
+	def Init():
+		global fileName, oFile, oStream
+		fileName = ""
+		oFile = ""
+		oStream = []
+		return fileName, oFile, oStream
 
 	def setFilename(strIn):
-		global fileName
 		fileName = strIn
 
 	def Constructor(fileName):
-		global oFile
 		oFile = open(fileName, 'w')
 
 	def Close():
-		global oFile
 		oFile.close()
 
 	def writePushPop(command, segment, index):
@@ -75,21 +70,18 @@ M=M-D	// X-Y, left in top of stack
 
 class Parser:
 	"""Parser of VM code"""
-	def __init__(self, iStream, iLength, index):
-		self.iStream = iStream
-		self.iLength = iLength
-		self.index = index
-	
-	#global iStream
-	#global iLength
-	#global index
-	self.iStream = []
-	self.iLength = 0
-	self.index = -1
+	def Init():
+		global iLength, index
+		iLength = 0
+		index = -1
+		global iStream
+		iStream = []
+		return iLength, iStream
 
-	#@staticmethod
 	def Constructor(vmFile):
-		#global iLength
+		iLength = 0
+		index = -1
+		iStream = []
 		fh = open(vmFile, 'r')
 		rawInput = fh.readlines()
 		for directive in rawInput:
@@ -98,18 +90,14 @@ class Parser:
 			directive = directive.strip()
 			if len(directive) > 0: 
 				directive = directive.replace('\t', ' ')
-				self.iStream.append(directive)
-				self.iLength += 1
+				iStream.append(directive)
+				iLength += 1
 
 	def hasMoreCommands():
-		global index
-		global iLength
 		return index < iLength
 
 	def advance():
-		global index
-
-		if Parser.hasMoreCommands():
+		if hasMoreCommands():
 			index += 1
 
 	def commandType():
@@ -150,6 +138,7 @@ class Parser:
 			  "return":"C_RETURN",}
 		return commands.get(strIn, None)
 
+
 global cue
 cue = 1
 while cue <= len(sys.argv):
@@ -163,6 +152,8 @@ while cue <= len(sys.argv):
 
 	w = CodeWriter
 	r = Parser
+	w.Init()
+	r.Init()
 
 	w.setFilename(name)
 	w.Constructor(fileName + ".asm")
