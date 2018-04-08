@@ -124,7 +124,7 @@ class Parser(object):
 	def advance(self):
 		if self.hasMoreCommands(self):
 			self.index += 1
-			print(self.index)
+			print(self.index) # debug: note, index is stuck at 0
 
 	def commandType(self):
 		directive = operator.itemgetter(self.index)(self.iStream)
@@ -169,7 +169,7 @@ global cue
 cue = 1
 while cue <= len(sys.argv):
 	qued = sys.argv[cue]
-	name = "name_def"
+	name = "default_name"
 	extenstion = "x"
 	try:
 		name, extension = qued.split('.')
@@ -186,7 +186,9 @@ while cue <= len(sys.argv):
 	r.Constructor(r, qued)
 	if r.hasMoreCommands(r):
 		print(r.commandType(r))
-		r.advance(r)
+		r.advance(r) # this isn't working?
+		r.index += 1
+		print(str(r.index) + " our index")
 
 else:
 	print("Usage:")
